@@ -58,12 +58,12 @@ const (
 
 // Meta holds operational metadata for a Floor 0 node (BGSpec meta block).
 type Meta struct {
-	Description      string   `json:"description,omitempty"`
-	Team             string   `json:"team,omitempty"`
-	Repo             string   `json:"repo,omitempty"`
-	Docs             string   `json:"docs,omitempty"`
-	Tags             []string `json:"tags,omitempty"`
-	SLA              string   `json:"sla,omitempty"`
-	ExtractedAt      string   `json:"extractedAt,omitempty"`
-	ExtractorVersion string   `json:"extractorVersion,omitempty"`
+	Description      string            `json:"description,omitempty"`
+	Team             string            `json:"team,omitempty"`
+	Repo             string            `json:"repo,omitempty"`
+	Docs             string            `json:"docs,omitempty"`
+	Tags             map[string]string `json:"tags,omitempty"`
+	SLA              string            `json:"sla,omitempty"`
+	ExtractedAt      string            `json:"extractedAt,omitempty"`
+	ExtractorVersion string            `json:"extractorVersion,omitempty"`
 }
