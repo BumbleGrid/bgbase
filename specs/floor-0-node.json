@@ -255,10 +255,9 @@
               "format": "uri"
             },
             "tags": {
-              "type": "array",
-              "description": "Arbitrary string tags for search and filtering.",
-              "items": { "type": "string" },
-              "uniqueItems": true
+              "type": "object",
+              "description": "Arbitrary string key/value tags for search, filtering, and extractor hints (e.g. k8s.edge.* keys resolved by the edge mapper).",
+              "additionalProperties": { "type": "string" }
             },
             "criticality": {
               "type": "string",
@@ -316,6 +315,10 @@
         "drillTo": null,
         "meta": {
           "team": "payments-squad",
+          "tags": {
+            "environment": "production",
+            "cost-center": "payments"
+          },
           "criticality": "critical",
           "extractedAt": "2025-05-09T10:00:00Z",
           "extractorVersion": "0.1.0"
