@@ -83,7 +83,7 @@
 
     "styleMap": {
       "type": "object",
-      "description": "HUMAN-OWNED. Canonical store for all rendering overrides that must survive automated re-extraction.\n\nOwnership rules:\n  - Extractors MUST NOT read or write this block.\n  - Version control diffs on 'floors' reflect only structural/infra changes.\n  - Diffs on 'styleMap' reflect only intentional visual decisions.\n\nResolution order (later entries win, same as CSS specificity):\n  1. styleMap.global        — applies to every node/edge in the document\n  2. styleMap.byFloor[n]    — applies to every node/edge on floor n\n  3. styleMap.byId[\"<id>\"]  — applies to the single node or edge with that id\n\nAt render time, a consumer merges these three layers, then applies any\ninline 'style' field present on the node/edge itself (highest priority).\nInline 'style' is an escape hatch; prefer 'styleMap.byId' for anything\nthat should persist across re-extractions.",
+      "description": "HUMAN-OWNED. Canonical store for all rendering overrides that must survive automated re-extraction.\n\nOwnership rules:\n  - Extractors MUST NOT read or write this block.\n  - Version control diffs on 'floors' reflect only structural/infra changes.\n  - Diffs on 'styleMap' reflect only intentional visual decisions.\n\nResolution order (later entries win, same as CSS specificity):\n  1. styleMap.global        — applies to every node/edge in the document\n  2. styleMap.byFloor[n]    — applies to every node/edge on floor n\n  3. styleMap.byTag         — applies when data.meta.tags matches a key/value pair (see 'byTag')\n  4. styleMap.byId[\"<id>\"]  — applies to the single node or edge with that id\n\nAt render time, a consumer merges these layers, then applies any\ninline 'style' field present on the node/edge itself (highest priority).\nInline 'style' is an escape hatch; prefer 'styleMap.byId' for anything\nthat should persist across re-extractions.",
 
       "additionalProperties": false,
       "properties": {
@@ -104,9 +104,21 @@
           }
         },
 
+        "byTag": {
+          "type": "object",
+          "description": "Style rules keyed by meta.tags key/value pairs. Each property is a tag key (same string as in data.meta.tags on Floor 0 nodes). Its value is an object mapping tag values to styleRules — e.g. \"env\": { \"prod\": { ... } } matches meta.tags.env === \"prod\". Applies to every node or edge on any floor whose data.meta.tags defines that key with that value (string equality). When multiple pairs match, consumers SHOULD merge matching blocks in a stable documented order. Overrides 'global' and 'byFloor'. Overridden by 'byId'.",
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "$ref": "#/definitions/styleRules"
+            }
+          }
+        },
+
         "byId": {
           "type": "object",
-          "description": "Style rules keyed by node or edge 'id'. Targets a single element. Overrides both 'global' and 'byFloor'. Use this for per-node color, position, or border overrides that should survive re-extraction.",
+          "description": "Style rules keyed by node or edge 'id'. Targets a single element. Overrides 'global', 'byFloor', and 'byTag'. Use this for per-node color, position, or border overrides that should survive re-extraction.",
           "additionalProperties": false,
           "patternProperties": {
             "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$": {
@@ -133,7 +145,7 @@
 
     "styleRules": {
       "type": "object",
-      "description": "A portable set of rendering hints. When applied via 'styleMap', these rules target the node or edge matched by the parent key (global / byFloor / byId). When applied inline on a node or edge, they target that element only.\n\nAll fields are optional. Renderers provide sensible defaults per bgKind and bgRelation.",
+      "description": "A portable set of rendering hints. When applied via 'styleMap', these rules target the node or edge matched by the parent key (global / byFloor / byTag / byId). When applied inline on a node or edge, they target that element only.\n\nAll fields are optional. Renderers provide sensible defaults per bgKind and bgRelation.",
       "additionalProperties": false,
       "properties": {
 
@@ -395,6 +407,15 @@
             "node": {
               "color": "#FFF8F0",
               "textColor": "#2E1A0A"
+            }
+          }
+        },
+        "byTag": {
+          "environment": {
+            "production": {
+              "node": {
+                "borderStyle": "dashed"
+              }
             }
           }
         },

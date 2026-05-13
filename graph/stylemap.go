@@ -3,9 +3,10 @@ package graph
 // StyleMap is the root-level human-owned rendering layer (BGSpec styleMap).
 // Extractors must not read or write this block.
 type StyleMap struct {
-	Global  *StyleRules           `json:"global,omitempty"`
-	ByFloor map[string]StyleRules `json:"byFloor,omitempty"`
-	ByID    map[string]StyleRules `json:"byId,omitempty"`
+	Global  *StyleRules                      `json:"global,omitempty"`
+	ByFloor map[string]StyleRules            `json:"byFloor,omitempty"`
+	ByTag   map[string]map[string]StyleRules `json:"byTag,omitempty"`
+	ByID    map[string]StyleRules            `json:"byId,omitempty"`
 }
 
 // StyleRules merges node-scoped and edge-scoped hints for one resolution target.
