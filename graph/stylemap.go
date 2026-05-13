@@ -1,0 +1,47 @@
+package graph
+
+// StyleMap is the root-level human-owned rendering layer (BGSpec styleMap).
+// Extractors must not read or write this block.
+type StyleMap struct {
+	Global  *StyleRules           `json:"global,omitempty"`
+	ByFloor map[string]StyleRules `json:"byFloor,omitempty"`
+	ByID    map[string]StyleRules `json:"byId,omitempty"`
+}
+
+// StyleRules merges node-scoped and edge-scoped hints for one resolution target.
+type StyleRules struct {
+	Node *NodeStyleRules `json:"node,omitempty"`
+	Edge *EdgeStyleRules `json:"edge,omitempty"`
+}
+
+// NodeStyleRules matches BGSpec definitions/styleRules.properties.node.
+type NodeStyleRules struct {
+	Color       string          `json:"color,omitempty"`
+	TextColor   string          `json:"textColor,omitempty"`
+	BorderColor string          `json:"borderColor,omitempty"`
+	BorderWidth float64         `json:"borderWidth,omitempty"`
+	BorderStyle string          `json:"borderStyle,omitempty"`
+	Shape       string          `json:"shape,omitempty"`
+	Icon        string          `json:"icon,omitempty"`
+	Opacity     float64         `json:"opacity,omitempty"`
+	Width       float64         `json:"width,omitempty"`
+	Height      float64         `json:"height,omitempty"`
+	Position    *CanvasPosition `json:"position,omitempty"`
+}
+
+// EdgeStyleRules matches BGSpec definitions/styleRules.properties.edge.
+type EdgeStyleRules struct {
+	Color            string  `json:"color,omitempty"`
+	Width            float64 `json:"width,omitempty"`
+	LineStyle        string  `json:"lineStyle,omitempty"`
+	TargetArrowShape string  `json:"targetArrowShape,omitempty"`
+	SourceArrowShape string  `json:"sourceArrowShape,omitempty"`
+	Opacity          float64 `json:"opacity,omitempty"`
+	LabelColor       string  `json:"labelColor,omitempty"`
+}
+
+// CanvasPosition is a fixed layout coordinate under styleMap.
+type CanvasPosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}

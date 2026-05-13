@@ -1,0 +1,505 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/bgspec.schema.json",
+  "title": "BumbleGrid Spec Document",
+  "description": "A Bumble Grid Specification document. Defines a multi-floor graph that maps a company's infrastructure, features, and business workflows across increasing levels of abstraction. Floor 0 is the physical/logical infrastructure layer. Higher floors (1+) are reserved for future specification.",
+
+  "type": "object",
+  "required": ["bgspec", "document", "floors"],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "bgspec": {
+      "type": "string",
+      "description": "BGSpec format version. Used by consumers to select the correct parser and validator.",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "examples": ["0.1"]
+    },
+
+    "document": {
+      "type": "object",
+      "description": "Metadata about this BGSpec document itself — not about any single floor or node.",
+      "required": ["title", "company", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+
+        "title": {
+          "type": "string",
+          "description": "Human-readable title for this document.",
+          "minLength": 1
+        },
+
+        "company": {
+          "type": "string",
+          "description": "Name of the organization this document describes.",
+          "minLength": 1
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of the last modification, by a human or extractor pipeline."
+        },
+
+        "description": {
+          "type": ["string", "null"],
+          "description": "Optional free-text summary of scope and context."
+        },
+
+        "authors": {
+          "type": "array",
+          "description": "People or systems responsible for maintaining this document.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name":  { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "role":  { "type": "string" }
+            }
+          }
+        },
+
+        "tags": {
+          "type": "array",
+          "description": "Arbitrary string tags for search and categorisation.",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+
+        "links": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "repo":      { "type": "string", "format": "uri" },
+            "docs":      { "type": "string", "format": "uri" },
+            "dashboard": { "type": "string", "format": "uri" }
+          }
+        }
+      }
+    },
+
+    "styleMap": {
+      "type": "object",
+      "description": "HUMAN-OWNED. Canonical store for all rendering overrides that must survive automated re-extraction.\n\nOwnership rules:\n  - Extractors MUST NOT read or write this block.\n  - Version control diffs on 'floors' reflect only structural/infra changes.\n  - Diffs on 'styleMap' reflect only intentional visual decisions.\n\nResolution order (later entries win, same as CSS specificity):\n  1. styleMap.global        — applies to every node/edge in the document\n  2. styleMap.byFloor[n]    — applies to every node/edge on floor n\n  3. styleMap.byId[\"<id>\"]  — applies to the single node or edge with that id\n\nAt render time, a consumer merges these three layers, then applies any\ninline 'style' field present on the node/edge itself (highest priority).\nInline 'style' is an escape hatch; prefer 'styleMap.byId' for anything\nthat should persist across re-extractions.",
+
+      "additionalProperties": false,
+      "properties": {
+
+        "global": {
+          "$ref": "#/definitions/styleRules",
+          "description": "Style rules applied to ALL nodes and ALL edges in this document. Useful for setting a consistent font, default node color, or default edge line style for the entire map."
+        },
+
+        "byFloor": {
+          "type": "object",
+          "description": "Style rules keyed by floor number (as a string, e.g. \"0\", \"1\"). Applied to every node and edge on that floor. Overrides 'global'.",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[0-9]+$": {
+              "$ref": "#/definitions/styleRules"
+            }
+          }
+        },
+
+        "byId": {
+          "type": "object",
+          "description": "Style rules keyed by node or edge 'id'. Targets a single element. Overrides both 'global' and 'byFloor'. Use this for per-node color, position, or border overrides that should survive re-extraction.",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$": {
+              "$ref": "#/definitions/styleRules"
+            }
+          }
+        }
+
+      }
+    },
+
+    "floors": {
+      "type": "array",
+      "description": "Ordered array of floors, from Floor 0 upward. At least two floors are required.",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/definitions/floor"
+      }
+    }
+
+  },
+
+  "definitions": {
+
+    "styleRules": {
+      "type": "object",
+      "description": "A portable set of rendering hints. When applied via 'styleMap', these rules target the node or edge matched by the parent key (global / byFloor / byId). When applied inline on a node or edge, they target that element only.\n\nAll fields are optional. Renderers provide sensible defaults per bgKind and bgRelation.",
+      "additionalProperties": false,
+      "properties": {
+
+        "node": {
+          "type": "object",
+          "description": "Rules that apply only to nodes. Ignored when this styleRules block is resolved against an edge.",
+          "additionalProperties": false,
+          "properties": {
+
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Node background / fill color."
+            },
+
+            "textColor": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Label text color."
+            },
+
+            "borderColor": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Node outline / border color."
+            },
+
+            "borderWidth": {
+              "type": "number",
+              "description": "Node outline width in renderer units.",
+              "minimum": 0.5,
+              "maximum": 12
+            },
+
+            "borderStyle": {
+              "type": "string",
+              "description": "Node outline style.",
+              "enum": ["solid", "dashed", "dotted", "double"]
+            },
+
+            "shape": {
+              "type": "string",
+              "description": "Cytoscape node shape override.",
+              "enum": [
+                "ellipse", "triangle", "rectangle", "roundrectangle",
+                "diamond", "pentagon", "hexagon", "heptagon", "octagon",
+                "star", "barrel", "rhomboid", "vee", "polygon"
+              ]
+            },
+
+            "icon": {
+              "type": "string",
+              "description": "Icon identifier or URL. Renderers resolve this to an image asset."
+            },
+
+            "opacity": {
+              "type": "number",
+              "description": "Node opacity. 0 = fully transparent, 1 = fully opaque.",
+              "minimum": 0,
+              "maximum": 1
+            },
+
+            "width": {
+              "type": "number",
+              "description": "Node width in renderer units. If absent, renderer auto-sizes.",
+              "minimum": 10
+            },
+
+            "height": {
+              "type": "number",
+              "description": "Node height in renderer units. If absent, renderer auto-sizes.",
+              "minimum": 10
+            },
+
+            "position": {
+              "type": "object",
+              "description": "Fixed canvas position for this node. When set, the renderer pins the node and skips auto-layout for it. If absent, the renderer places the node automatically.\n\nNOTE: 'position' is intentionally housed in 'styleMap.byId' rather than in the node's data envelope, because position is a rendering decision, not an infrastructure fact. Keeping it here ensures the extractor cannot accidentally overwrite a carefully placed node.",
+              "required": ["x", "y"],
+              "additionalProperties": false,
+              "properties": {
+                "x": { "type": "number", "description": "Horizontal canvas coordinate." },
+                "y": { "type": "number", "description": "Vertical canvas coordinate." }
+              }
+            }
+
+          }
+        },
+
+        "edge": {
+          "type": "object",
+          "description": "Rules that apply only to edges. Ignored when this styleRules block is resolved against a node.",
+          "additionalProperties": false,
+          "properties": {
+
+            "color": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Edge line color."
+            },
+
+            "width": {
+              "type": "number",
+              "description": "Edge line width in renderer units.",
+              "minimum": 0.5,
+              "maximum": 10
+            },
+
+            "lineStyle": {
+              "type": "string",
+              "description": "Edge line style.",
+              "enum": ["solid", "dashed", "dotted"]
+            },
+
+            "targetArrowShape": {
+              "type": "string",
+              "description": "Arrow shape at the target end.",
+              "enum": ["triangle", "triangle-backcurve", "vee", "tee", "circle", "none"]
+            },
+
+            "sourceArrowShape": {
+              "type": "string",
+              "description": "Arrow shape at the source end. Useful for bidirectional edges.",
+              "enum": ["triangle", "triangle-backcurve", "vee", "tee", "circle", "none"]
+            },
+
+            "opacity": {
+              "type": "number",
+              "description": "Edge opacity. 0 = fully transparent, 1 = fully opaque.",
+              "minimum": 0,
+              "maximum": 1
+            },
+
+            "labelColor": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$",
+              "description": "Color of the edge label text."
+            }
+
+          }
+        }
+
+      }
+    },
+
+    "floor": {
+      "type": "object",
+      "required": ["floor", "label", "description", "nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+
+        "floor": {
+          "type": "integer",
+          "description": "Floor number. 0 = Physical/Logical. Must be unique, contiguous, starting at 0.",
+          "minimum": 0
+        },
+
+        "label": {
+          "type": "string",
+          "description": "Short human-readable name for this abstraction layer.",
+          "minLength": 1
+        },
+
+        "description": {
+          "type": "string",
+          "description": "What this floor represents, what kinds of nodes live here, and how it relates to adjacent floors."
+        },
+
+        "nodes": {
+          "type": "array",
+          "description": "All nodes at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Node schema.",
+          "if": { "properties": { "floor": { "const": 0 } } },
+          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-node.json" } },
+          "else:": {
+            "items": {
+              "type": "object",
+              "required": ["data"],
+              "additionalProperties": false,
+              "properties": {
+                "data": { "type": "object", "description": "Cytoscape-compatible data envelope." }
+              }
+            }
+          }
+        },
+
+        "edges": {
+          "type": "array",
+          "description": "All edges at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Edge schema.",
+          "if": { "properties": { "floor": { "const": 0 } } },
+          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-edge.json" } },
+          "else:": {
+            "items": {
+              "type": "object",
+              "required": ["data"],
+              "additionalProperties": false,
+              "properties": {
+                "data": { "type": "object", "description": "Cytoscape-compatible data envelope." }
+              }
+            }
+          }
+        },
+
+        "meta": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["draft", "review", "approved", "deprecated"]
+            },
+            "extractedAt":       { "type": "string", "format": "date-time" },
+            "extractorVersion":  { "type": "string" },
+            "notes":             { "type": "string" }
+          }
+        }
+
+      }
+    }
+
+  },
+
+  "examples": [
+    {
+      "bgspec": "0.2",
+      "document": {
+        "title": "Payments Domain — Infrastructure Map",
+        "company": "Acme Corp",
+        "updatedAt": "2025-05-13T10:00:00Z",
+        "description": "Floor 0 infrastructure graph for the Payments domain.",
+        "authors": [
+          { "name": "bgspec-extractor-ci", "role": "Automated Extractor" },
+          { "name": "Alice Kim", "email": "alice@acme.com", "role": "Platform Engineer" }
+        ],
+        "tags": ["payments", "infrastructure", "k8s"]
+      },
+
+      "styleMap": {
+        "global": {
+          "node": {
+            "borderStyle": "solid",
+            "borderWidth": 1,
+            "borderColor": "#CCCCCC"
+          },
+          "edge": {
+            "lineStyle": "solid",
+            "color": "#999999"
+          }
+        },
+        "byFloor": {
+          "0": {
+            "node": {
+              "color": "#F0F4FF",
+              "textColor": "#1A1A2E"
+            },
+            "edge": {
+              "color": "#6B7FD7"
+            }
+          },
+          "1": {
+            "node": {
+              "color": "#FFF8F0",
+              "textColor": "#2E1A0A"
+            }
+          }
+        },
+        "byId": {
+          "k8s-payments-api": {
+            "node": {
+              "color": "#534AB7",
+              "textColor": "#EEEDFE",
+              "borderColor": "#2E2580",
+              "borderWidth": 2,
+              "position": { "x": 340, "y": 200 }
+            }
+          },
+          "k8s-payments-postgres": {
+            "node": {
+              "color": "#1E6B3C",
+              "textColor": "#EAFAF1",
+              "borderColor": "#145228",
+              "borderWidth": 2,
+              "position": { "x": 340, "y": 380 }
+            }
+          },
+          "k8s-payments-api--calls--k8s-identity-api": {
+            "edge": {
+              "lineStyle": "dashed",
+              "color": "#D97706",
+              "width": 2,
+              "targetArrowShape": "triangle"
+            }
+          }
+        }
+      },
+
+      "floors": [
+        {
+          "floor": 0,
+          "label": "Infrastructure",
+          "description": "Physical and logical infrastructure layer. Nodes are Kubernetes resources.",
+          "meta": {
+            "status": "approved",
+            "extractedAt": "2025-05-13T10:00:00Z",
+            "extractorVersion": "0.2.0"
+          },
+          "nodes": [
+            {
+              "data": {
+                "id": "k8s-payments-namespace",
+                "label": "payments",
+                "floor": 0,
+                "bgKind": "Namespace",
+                "infraProvider": "kubernetes",
+                "k8s": { "kind": "Namespace", "name": "payments", "namespace": null, "apiVersion": "v1" },
+                "parent": null,
+                "drillTo": null,
+                "style": {},
+                "meta": { "team": "platform-engineering", "extractedAt": "2025-05-13T10:00:00Z", "extractorVersion": "0.2.0" }
+              }
+            },
+            {
+              "data": {
+                "id": "k8s-payments-api",
+                "label": "Payments API",
+                "floor": 0,
+                "bgKind": "Workload",
+                "infraProvider": "kubernetes",
+                "k8s": {
+                  "kind": "Deployment", "name": "payments-api", "namespace": "payments",
+                  "apiVersion": "apps/v1", "replicas": 3, "image": "payments-api:2.1.0",
+                  "resources": {
+                    "requests": { "cpu": "250m", "memory": "512Mi" },
+                    "limits":   { "cpu": "1",    "memory": "1Gi" }
+                  }
+                },
+                "parent": "k8s-payments-namespace",
+                "drillTo": null,
+                "style": {},
+                "meta": { "team": "payments-squad", "criticality": "critical", "extractedAt": "2025-05-13T10:00:00Z", "extractorVersion": "0.2.0" }
+              }
+            }
+          ],
+          "edges": [
+            {
+              "data": {
+                "id": "k8s-payments-api--calls--k8s-identity-api",
+                "source": "k8s-payments-api",
+                "target": "k8s-identity-api",
+                "floor": 0,
+                "bgRelation": "Calls",
+                "extractionSource": "manual",
+                "inferred": false,
+                "label": "token validation",
+                "style": {},
+                "meta": { "description": "Payments API calls Identity API to validate JWT tokens on every request." }
+              }
+            }
+          ]
+        },
+        {
+          "floor": 1,
+          "label": "Features",
+          "description": "Product and capability features.",
+          "nodes": [],
+          "edges": []
+        }
+      ]
+    }
+  ]
+}

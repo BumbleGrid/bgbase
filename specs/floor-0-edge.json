@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-edge.json",
+  "title": "BGSpec Floor 0 Edge",
+  "description": "Defines a single edge at Floor 0 (Physical / Logical layer) of a Bumble Grid Specification document. Edges may be produced by automated extractors (k8s manifest analysis, Istio VirtualService/DestinationRule) or declared manually by a human. The 'extractionSource' field is always required and must honestly reflect the origin. Manual edges are permitted at Floor 0 exclusively to cover runtime relationships (e.g. Workload-to-Workload traffic) that are invisible to static infrastructure manifests.",
+
+  "type": "object",
+  "required": ["data"],
+  "additionalProperties": false,
+
+  "properties": {
+    "data": {
+      "type": "object",
+      "description": "Cytoscape-compatible data envelope. All BGSpec edge fields live here.",
+      "required": ["id", "source", "target", "floor", "bgRelation", "extractionSource"],
+      "additionalProperties": false,
+
+      "properties": {
+
+        "id": {
+          "type": "string",
+          "description": "Globally unique edge identifier within this BGSpec document. Recommended convention: '<source-id>--<bgRelation>--<target-id>' e.g. 'k8s-payments-svc--Exposes--k8s-payments-api'.",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$"
+        },
+
+        "source": {
+          "type": "string",
+          "description": "ID of the source node. Must reference a node 'id' present in the same BGSpec document.",
+          "minLength": 1
+        },
+
+        "target": {
+          "type": "string",
+          "description": "ID of the target node. Must reference a node 'id' present in the same BGSpec document.",
+          "minLength": 1
+        },
+
+        "floor": {
+          "type": "integer",
+          "description": "Floor number. Always 0 for Floor 0 edges.",
+          "const": 0
+        },
+
+        "bgRelation": {
+          "type": "string",
+          "description": "BGSpec's own edge taxonomy. Describes the nature of the relationship between two Floor 0 nodes, independent of provider or protocol.",
+          "enum": [
+            "Routes",
+            "Exposes",
+            "Mounts",
+            "ScheduledBy",
+            "Calls"
+          ]
+        },
+
+        "extractionSource": {
+          "type": "string",
+          "description": "Declares the origin of this edge. 'k8s-manifest' and 'istio-manifest' are produced by automated extractors. 'manual' is human-declared. This field is the primary trust signal for consumers of the graph.",
+          "enum": [
+            "k8s-manifest",
+            "istio-manifest",
+            "manual"
+          ]
+        },
+
+        "inferred": {
+          "type": "boolean",
+          "description": "True if this edge was derived by logical inference (e.g. label selector matching between a Service and a Deployment) rather than an explicit reference in a manifest. False if the relationship is an explicit declaration (e.g. an Ingress backend field pointing to a Service by name). Always false for manual edges.",
+          "default": false
+        },
+
+        "label": {
+          "type": ["string", "null"],
+          "description": "Optional human-readable label shown on the edge in a renderer. Extractor may populate this (e.g. port number or route path). Human may override for manual edges."
+        },
+
+        "meta": {
+          "type": "object",
+          "description": "Operational metadata for this edge. Human-editable for manual edges; extractor-populated otherwise.",
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Free-text explanation of why this connection exists. Especially valuable for manual edges where the relationship is not obvious from manifests."
+            },
+            "extractedAt": {
+              "type": "string",
+              "format": "date-time",
+              "description": "ISO 8601 timestamp of when this edge was last extracted. Omit for manual edges."
+            },
+            "extractorVersion": {
+              "type": "string",
+              "description": "Version of the BGSpec extractor that produced this edge. Omit for manual edges."
+            }
+          }
+        }
+
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "comment": "Automated — Ingress routes to a Service (explicit manifest reference, not inferred)",
+      "data": {
+        "id": "k8s-payments-ingress--routes--k8s-payments-svc",
+        "source": "k8s-payments-ingress",
+        "target": "k8s-payments-svc",
+        "floor": 0,
+        "bgRelation": "Routes",
+        "extractionSource": "k8s-manifest",
+        "inferred": false,
+        "label": "/payments/*",
+        "meta": {
+          "extractedAt": "2025-05-09T10:00:00Z",
+          "extractorVersion": "0.1.0"
+        }
+      }
+    },
+    {
+      "comment": "Automated — Service exposes a Deployment (inferred via label selector matching)",
+      "data": {
+        "id": "k8s-payments-svc--exposes--k8s-payments-api",
+        "source": "k8s-payments-svc",
+        "target": "k8s-payments-api",
+        "floor": 0,
+        "bgRelation": "Exposes",
+        "extractionSource": "k8s-manifest",
+        "inferred": true,
+        "label": null,
+        "meta": {
+          "extractedAt": "2025-05-09T10:00:00Z",
+          "extractorVersion": "0.1.0"
+        }
+      }
+    },
+    {
+      "comment": "Automated — Workload mounts a Secret (explicit volumeMount declaration)",
+      "data": {
+        "id": "k8s-payments-api--mounts--k8s-payments-db-secret",
+        "source": "k8s-payments-api",
+        "target": "k8s-payments-db-secret",
+        "floor": 0,
+        "bgRelation": "Mounts",
+        "extractionSource": "k8s-manifest",
+        "inferred": false,
+        "label": null,
+        "meta": {
+          "extractedAt": "2025-05-09T10:00:00Z",
+          "extractorVersion": "0.1.0"
+        }
+      }
+    },
+    {
+      "comment": "Manual — cross-namespace runtime call invisible to k8s manifests. Persist line styling in the root document styleMap.byId[\"k8s-payments-api--calls--k8s-identity-api\"].edge (extractors must not write styleMap).",
+      "data": {
+        "id": "k8s-payments-api--calls--k8s-identity-api",
+        "source": "k8s-payments-api",
+        "target": "k8s-identity-api",
+        "floor": 0,
+        "bgRelation": "Calls",
+        "extractionSource": "manual",
+        "inferred": false,
+        "label": "token validation",
+        "meta": {
+          "description": "Payments API calls Identity API to validate JWT tokens on every request."
+        }
+      }
+    },
+    {
+      "comment": "Istio — VirtualService declares weighted routing between two service versions",
+      "data": {
+        "id": "k8s-catalog-vs--routes--k8s-catalog-api-v2",
+        "source": "k8s-catalog-vs",
+        "target": "k8s-catalog-api-v2",
+        "floor": 0,
+        "bgRelation": "Routes",
+        "extractionSource": "istio-manifest",
+        "inferred": false,
+        "label": "20% canary",
+        "meta": {
+          "extractedAt": "2025-05-09T10:00:00Z",
+          "extractorVersion": "0.1.0"
+        }
+      }
+    }
+  ]
+}
