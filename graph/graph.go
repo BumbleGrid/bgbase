@@ -14,6 +14,7 @@ import (
 type BGSpecDocument struct {
 	BGSpec   string          `json:"bgspec"`
 	Document DocumentMeta    `json:"document"`
+	StyleMap *StyleMap       `json:"styleMap,omitempty"`
 	Floors   []floor.Content `json:"floors"`
 }
 
@@ -70,6 +71,20 @@ func MarshalBGSpecJSON(doc BGSpecDocument) ([]byte, error) {
 		if floorEntry.Edges == nil {
 			floorEntry.Edges = []edge.Wrapper{}
 		}
+	}
+	return json.MarshalIndent(out, "", "  ")
+}
+
+// MarshalFloorContentJSON encodes a single floors[] entry (floor, label,
+// description, nodes, edges, optional meta). Nil nodes or edges become
+// empty JSON arrays to match the floor schema.
+func MarshalFloorContentJSON(f floor.Content) ([]byte, error) {
+	out := f
+	if out.Nodes == nil {
+		out.Nodes = []node.Wrapper{}
+	}
+	if out.Edges == nil {
+		out.Edges = []edge.Wrapper{}
 	}
 	return json.MarshalIndent(out, "", "  ")
 }

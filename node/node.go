@@ -19,8 +19,7 @@ type Data struct {
 
 	InfraProvider InfraProvider `json:"infraProvider"`
 
-	Style *Style `json:"style,omitempty"`
-	Meta  *Meta  `json:"meta,omitempty"`
+	Meta *Meta `json:"meta,omitempty"`
 
 	// TODO maybe we will need to add ProviderMetadata here
 }
@@ -56,22 +55,6 @@ const (
 	InfraProviderCloudFormation InfraProvider = "cloudformation"
 	InfraProviderManual         InfraProvider = "manual"
 )
-
-// Style holds renderer hints for Floor 0 nodes (BGSpec style block).
-type Style struct {
-	Color       string    `json:"color,omitempty"`
-	TextColor   string    `json:"textColor,omitempty"`
-	BorderColor string    `json:"borderColor,omitempty"`
-	BorderWidth float64   `json:"borderWidth,omitempty"`
-	Shape       string    `json:"shape,omitempty"`
-	Position    *Position `json:"position,omitempty"`
-}
-
-// Position is a fixed canvas position under style.
-type Position struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-}
 
 // Meta holds operational metadata for a Floor 0 node (BGSpec meta block).
 type Meta struct {

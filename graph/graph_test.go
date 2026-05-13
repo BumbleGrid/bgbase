@@ -46,3 +46,18 @@ func TestMarshalBGSpecJSON_nilSlicesBecomeEmptyArrays(t *testing.T) {
 		t.Fatal("expected non-nil slices after unmarshal")
 	}
 }
+
+func TestMarshalFloorContentJSON_nilSlicesBecomeEmptyArrays(t *testing.T) {
+	fl := floor.Content{
+		Floor:       0,
+		Label:       "Infrastructure",
+		Description: "floor 0",
+	}
+	payload, err := MarshalFloorContentJSON(fl)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(payload), `"nodes":null`) || strings.Contains(string(payload), `"edges":null`) {
+		t.Fatalf("expected empty arrays, got: %s", payload)
+	}
+}

@@ -16,7 +16,6 @@ type Data struct {
 	ExtractionSource ExtractionSource `json:"extractionSource"`
 	Inferred         bool             `json:"inferred"`
 	Label            *string          `json:"label,omitempty"`
-	Style            Style            `json:"style"`
 	Meta             Meta             `json:"meta"`
 }
 
@@ -39,13 +38,6 @@ const (
 	ExtractionSourceIstioManifest ExtractionSource = "istio-manifest"
 	ExtractionSourceManual        ExtractionSource = "manual"
 )
-
-// Style holds renderer hints for Floor 0 edges.
-type Style struct {
-	Color     string  `json:"color,omitempty"`
-	Width     float64 `json:"width,omitempty"`
-	LineStyle string  `json:"lineStyle,omitempty"`
-}
 
 // Meta holds extractor timestamps and version for an edge.
 type Meta struct {
