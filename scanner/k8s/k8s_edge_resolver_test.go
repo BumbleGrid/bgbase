@@ -9,6 +9,64 @@ import (
 	"github.com/BumbleGrid/bgbase/node"
 )
 
+func testK8sStubForEdgeNodeID(id, label string) *node.K8sMetadata {
+	const nsMarker = "/k8s/namespaces/"
+	var k8sKind string
+	if pos := strings.Index(id, nsMarker); pos >= 0 {
+		tail := id[pos+len(nsMarker):]
+		if !strings.Contains(tail, "/") {
+			k8sKind = "Namespace"
+		}
+	}
+	if k8sKind == "" {
+		switch {
+		case strings.Contains(id, "/deployments/"):
+			k8sKind = "Deployment"
+		case strings.Contains(id, "/statefulsets/"):
+			k8sKind = "StatefulSet"
+		case strings.Contains(id, "/daemonsets/"):
+			k8sKind = "DaemonSet"
+		case strings.Contains(id, "/replicasets/"):
+			k8sKind = "ReplicaSet"
+		case strings.Contains(id, "/cronjobs/"):
+			k8sKind = "CronJob"
+		case strings.Contains(id, "/jobs/"):
+			k8sKind = "Job"
+		case strings.Contains(id, "/ingresses/"):
+			k8sKind = "Ingress"
+		case strings.Contains(id, "/ingressclasses/"):
+			k8sKind = "IngressClass"
+		case strings.Contains(id, "/configmaps/"):
+			k8sKind = "ConfigMap"
+		case strings.Contains(id, "/secrets/"):
+			k8sKind = "Secret"
+		case strings.Contains(id, "/persistentvolumeclaims/"):
+			k8sKind = "PersistentVolumeClaim"
+		case strings.Contains(id, "/persistentvolumes/"):
+			k8sKind = "PersistentVolume"
+		case strings.Contains(id, "/networkpolicies/"):
+			k8sKind = "NetworkPolicy"
+		case strings.Contains(id, "/horizontalpodautoscalers/"):
+			k8sKind = "HorizontalPodAutoscaler"
+		default:
+			k8sKind = "Service"
+		}
+	}
+	km := &node.K8sMetadata{Kind: k8sKind, Name: label}
+	if pos := strings.Index(id, nsMarker); pos >= 0 {
+		after := id[pos+len(nsMarker):]
+		slash := strings.IndexByte(after, '/')
+		if slash > 0 {
+			namespace := after[:slash]
+			km.Namespace = &namespace
+		}
+	}
+	if k8sKind == "PersistentVolume" || k8sKind == "IngressClass" || k8sKind == "Namespace" {
+		km.Namespace = nil
+	}
+	return km
+}
+
 func testEdgeNode(id string, kind node.BgKind, label string, tags map[string]string) node.Data {
 	meta := node.Meta{
 		ExtractorVersion: "1.0",
@@ -22,6 +80,7 @@ func testEdgeNode(id string, kind node.BgKind, label string, tags map[string]str
 		Floor:         0,
 		BgKind:        kind,
 		InfraProvider: node.InfraProviderKubernetes,
+		K8s:           testK8sStubForEdgeNodeID(id, label),
 		Meta:          &meta,
 	}
 }

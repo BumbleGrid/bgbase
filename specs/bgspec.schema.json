@@ -318,7 +318,7 @@
           "description": "All nodes at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Node schema.",
           "if": { "properties": { "floor": { "const": 0 } } },
           "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-node.json" } },
-          "else:": {
+          "else": {
             "items": {
               "type": "object",
               "required": ["data"],
@@ -335,7 +335,7 @@
           "description": "All edges at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Edge schema.",
           "if": { "properties": { "floor": { "const": 0 } } },
           "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-edge.json" } },
-          "else:": {
+          "else": {
             "items": {
               "type": "object",
               "required": ["data"],
@@ -351,10 +351,6 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "status": {
-              "type": "string",
-              "enum": ["draft", "review", "approved", "deprecated"]
-            },
             "extractedAt":       { "type": "string", "format": "date-time" },
             "extractorVersion":  { "type": "string" },
             "notes":             { "type": "string" }
@@ -455,7 +451,6 @@
           "label": "Infrastructure",
           "description": "Physical and logical infrastructure layer. Nodes are Kubernetes resources.",
           "meta": {
-            "status": "approved",
             "extractedAt": "2025-05-13T10:00:00Z",
             "extractorVersion": "0.2.0"
           },
