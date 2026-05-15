@@ -19,9 +19,9 @@ type Data struct {
 
 	InfraProvider InfraProvider `json:"infraProvider"`
 
-	Meta *Meta `json:"meta,omitempty"`
+	K8s *K8sMetadata `json:"k8s,omitempty"`
 
-	// TODO maybe we will need to add ProviderMetadata here
+	Meta *Meta `json:"meta,omitempty"`
 }
 
 // BgKind is the BGSpec node taxonomy (Workload, Database, etc.).

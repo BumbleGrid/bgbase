@@ -12,8 +12,14 @@ func TestNewBGSpecDocument_floorsAndPlaceholders(t *testing.T) {
 		Floor:       0,
 		Label:       "Live cluster",
 		Description: "Floor 0 from scan",
-		Nodes:       []node.Wrapper{{Data: node.Data{ID: "n1", Label: "x", Floor: 0}}},
-		Edges:       nil,
+		Nodes: []node.Wrapper{{Data: node.Data{
+			ID:            "n1",
+			Label:         "x",
+			Floor:         0,
+			BgKind:        node.BgKindWorkload,
+			InfraProvider: node.InfraProviderManual,
+		}}},
+		Edges: nil,
 	}
 	doc := NewBGSpecDocument(f0)
 	if doc.BGSpec != defaultBGSpecVersion {

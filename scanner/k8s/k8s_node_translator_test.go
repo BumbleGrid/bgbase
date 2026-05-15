@@ -55,6 +55,9 @@ func TestTranslateNamespaces(t *testing.T) {
 	if got.InfraProvider != node.InfraProviderKubernetes {
 		t.Errorf("InfraProvider = %q", got.InfraProvider)
 	}
+	if got.K8s == nil || got.K8s.Kind != "Namespace" || got.K8s.Name != "prod" {
+		t.Errorf("K8s = %+v", got.K8s)
+	}
 	if got.Meta == nil || got.Meta.ExtractorVersion != "0.9.0" {
 		t.Errorf("Meta = %+v", got.Meta)
 	}
@@ -83,6 +86,9 @@ func TestTranslateDeploymentsUsesNamespaceParent(t *testing.T) {
 	}
 	if got.BgKind != node.BgKindWorkload {
 		t.Errorf("BgKind = %q", got.BgKind)
+	}
+	if got.K8s == nil || got.K8s.Kind != "Deployment" || got.K8s.Name != "web" {
+		t.Errorf("K8s = %+v", got.K8s)
 	}
 }
 

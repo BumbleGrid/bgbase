@@ -20,7 +20,6 @@ func placeholderFloor(level int) floor.Content {
 		Nodes:       []node.Wrapper{},
 		Edges:       []edge.Wrapper{},
 		Meta: &floor.BlockMeta{
-			Status:           "placeholder",
 			Notes:            "Reserved for higher-level graph views.",
 			ExtractorVersion: "",
 			ExtractedAt:      "",

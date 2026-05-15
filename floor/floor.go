@@ -19,7 +19,6 @@ type Content struct {
 
 // BlockMeta is optional floor-level metadata on the root floors[] items.
 type BlockMeta struct {
-	Status           string `json:"status,omitempty"`
 	ExtractedAt      string `json:"extractedAt,omitempty"`
 	ExtractorVersion string `json:"extractorVersion,omitempty"`
 	Notes            string `json:"notes,omitempty"`
