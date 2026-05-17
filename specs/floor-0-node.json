@@ -259,15 +259,6 @@
               "description": "Arbitrary string key/value tags for search, filtering, and extractor hints (e.g. k8s.edge.* keys resolved by the edge mapper).",
               "additionalProperties": { "type": "string" }
             },
-            "criticality": {
-              "type": "string",
-              "description": "Business criticality classification.",
-              "enum": ["low", "medium", "high", "critical"]
-            },
-            "sla": {
-              "type": "string",
-              "description": "Target availability SLA. E.g. '99.9%'."
-            },
             "extractedAt": {
               "type": "string",
               "format": "date-time",
