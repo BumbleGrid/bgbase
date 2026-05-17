@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/bgspec.schema.json",
   "title": "BumbleGrid Spec Document",
-  "description": "A Bumble Grid Specification document. Defines a multi-floor graph that maps a company's infrastructure, features, and business workflows across increasing levels of abstraction. Floor 0 is the physical/logical infrastructure layer. Higher floors (1+) are reserved for future specification.",
+  "description": "A Bumble Grid Specification document. Defines a multi-floor graph that maps a company's infrastructure, features, and business workflows across increasing levels of abstraction. Floor 0 is the physical/logical infrastructure layer with a closed node/edge taxonomy. Floors 1 and above share a single permissive schema: Cytoscape-shaped nodes and edges with no enforced semantic types.",
 
   "type": "object",
   "required": ["bgspec", "document", "floors"],
@@ -187,13 +187,8 @@
             },
 
             "shape": {
-              "type": "string",
-              "description": "Cytoscape node shape override.",
-              "enum": [
-                "ellipse", "triangle", "rectangle", "roundrectangle",
-                "diamond", "pentagon", "hexagon", "heptagon", "octagon",
-                "star", "barrel", "rhomboid", "vee", "polygon"
-              ]
+              "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/nodeShape",
+              "description": "Cytoscape node shape override."
             },
 
             "icon": {
@@ -254,21 +249,23 @@
             },
 
             "lineStyle": {
-              "type": "string",
-              "description": "Edge line style.",
-              "enum": ["solid", "dashed", "dotted"]
+              "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/lineStyle",
+              "description": "Edge line style."
+            },
+
+            "curveStyle": {
+              "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/curveStyle",
+              "description": "Cytoscape edge curve-style override."
             },
 
             "targetArrowShape": {
-              "type": "string",
-              "description": "Arrow shape at the target end.",
-              "enum": ["triangle", "triangle-backcurve", "vee", "tee", "circle", "none"]
+              "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/arrowShape",
+              "description": "Arrow shape at the target end."
             },
 
             "sourceArrowShape": {
-              "type": "string",
-              "description": "Arrow shape at the source end. Useful for bidirectional edges.",
-              "enum": ["triangle", "triangle-backcurve", "vee", "tee", "circle", "none"]
+              "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/arrowShape",
+              "description": "Arrow shape at the source end. Useful for bidirectional edges."
             },
 
             "opacity": {
@@ -317,16 +314,9 @@
           "type": "array",
           "description": "All nodes at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Node schema.",
           "if": { "properties": { "floor": { "const": 0 } } },
-          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-node.json" } },
+          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-node.json" } },
           "else": {
-            "items": {
-              "type": "object",
-              "required": ["data"],
-              "additionalProperties": false,
-              "properties": {
-                "data": { "type": "object", "description": "Cytoscape-compatible data envelope." }
-              }
-            }
+            "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-node.json" }
           }
         },
 
@@ -334,16 +324,9 @@
           "type": "array",
           "description": "All edges at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Edge schema.",
           "if": { "properties": { "floor": { "const": 0 } } },
-          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.2/floor-0-edge.json" } },
+          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-edge.json" } },
           "else": {
-            "items": {
-              "type": "object",
-              "required": ["data"],
-              "additionalProperties": false,
-              "properties": {
-                "data": { "type": "object", "description": "Cytoscape-compatible data envelope." }
-              }
-            }
+            "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-edge.json" }
           }
         },
 
