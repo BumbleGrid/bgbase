@@ -46,6 +46,8 @@ type K8sLister interface {
 }
 
 type K8sNodeTranslator interface {
+	TranslateCluster(ctx context.Context, tctx K8sTranslateContext) (node.Data, error)
+
 	TranslateNamespaces(ctx context.Context, tctx K8sTranslateContext, items []corev1.Namespace) ([]node.Data, error)
 	TranslatePersistentVolumes(ctx context.Context, tctx K8sTranslateContext, items []corev1.PersistentVolume) ([]node.Data, error)
 	TranslateIngressClasses(ctx context.Context, tctx K8sTranslateContext, items []networkingv1.IngressClass) ([]node.Data, error)

@@ -30,6 +30,7 @@ func testTranslateContext() K8sTranslateContext {
 
 func k8sBgKindsEmittedByStockMapper() []node.BgKind {
 	return []node.BgKind{
+		node.BgKindCluster,
 		node.BgKindNamespace,
 		node.BgKindStorage,
 		node.BgKindGateway,
@@ -46,7 +47,6 @@ func k8sBgKindsEmittedByStockMapper() []node.BgKind {
 
 func k8sBgKindsNotEmittedByStockMapper() []node.BgKind {
 	return []node.BgKind{
-		node.BgKindCluster,
 		node.BgKindDatabase,
 		node.BgKindCache,
 		node.BgKindMessageBroker,
@@ -184,8 +184,14 @@ func TestFloor0Extractor_emptyCluster(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Floor0Extractor: %v", err)
 	}
-	if len(content.Nodes) != 0 {
-		t.Fatalf("expected 0 nodes, got %d", len(content.Nodes))
+	if len(content.Nodes) != 1 {
+		t.Fatalf("expected 1 cluster node, got %d", len(content.Nodes))
+	}
+	if content.Nodes[0].Data.BgKind != node.BgKindCluster {
+		t.Fatalf("sole node bgKind = %q, want Cluster", content.Nodes[0].Data.BgKind)
+	}
+	if content.Nodes[0].Data.ID != "cluster/main" {
+		t.Fatalf("cluster node id = %q", content.Nodes[0].Data.ID)
 	}
 	if content.Edges == nil {
 		t.Fatal("Edges slice is nil, want non-nil (possibly empty)")
@@ -321,8 +327,8 @@ func TestFloor0Extractor_expectedNodeCountSingleNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Floor0Extractor: %v", err)
 	}
-	wantNodes := 2 + 16
+	wantNodes := 1 + 2 + 16
 	if len(content.Nodes) != wantNodes {
-		t.Fatalf("len(nodes) = %d, want %d (cluster-scoped PV+IngressClass + namespace + 15 namespaced kinds)", len(content.Nodes), wantNodes)
+		t.Fatalf("len(nodes) = %d, want %d (cluster + cluster-scoped PV+IngressClass + namespace + 15 namespaced kinds)", len(content.Nodes), wantNodes)
 	}
 }
