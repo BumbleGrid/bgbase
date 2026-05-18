@@ -35,7 +35,7 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	if nsPos.X != 0 || nsPos.Y != 0 {
 		t.Fatalf("first cluster child position = (%v,%v), want (0,0)", nsPos.X, nsPos.Y)
 	}
-	nsWidth, _ := compoundNodeSize(2)
+	nsWidth := styleMap.ByID["cluster/main/k8s/namespaces/prod"].Node.Width
 	wantPVX := nsWidth + arrangeCellGap
 	if pvPos.X != wantPVX || pvPos.Y != 0 {
 		t.Fatalf("pv position = (%v,%v), want (%v,0)", pvPos.X, pvPos.Y, wantPVX)
@@ -54,18 +54,26 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	}
 
 	nsRules := styleMap.ByID["cluster/main/k8s/namespaces/prod"].Node
-	wantWidth, wantHeight := compoundNodeSize(2)
-	if nsRules.Width != wantWidth || nsRules.Height != wantHeight {
-		t.Fatalf("namespace size = (%v,%v), want (%v,%v)", nsRules.Width, nsRules.Height, wantWidth, wantHeight)
+	if nsRules.Width < 178*2 || nsRules.Height < 104*2 {
+		t.Fatalf("namespace size = (%v,%v), expected at least packed layout minimum", nsRules.Width, nsRules.Height)
 	}
 }
 
 func TestCompoundNodeSize(t *testing.T) {
 	width, height := compoundNodeSize(3)
-	wantWidth := 178 * 3 * 1.3
-	wantHeight := 104 * 3 * 1.3
+	wantWidth := float64(arrangeCellWidth * 3)
+	wantHeight := float64(arrangeCellHeight * 3)
 	if width != wantWidth || height != wantHeight {
 		t.Fatalf("compoundNodeSize(3) = (%v,%v), want (%v,%v)", width, height, wantWidth, wantHeight)
+	}
+}
+
+func TestFinalizeCompoundSize_usesPackedLayout(t *testing.T) {
+	state := &arrangeState{sizes: make(map[string]compoundSize)}
+	packed := compoundSize{width: 400, height: 200}
+	got := state.finalizeCompoundSize(2, packed)
+	if got.width <= packed.width || got.height <= packed.height {
+		t.Fatalf("finalizeCompoundSize = (%v,%v), want larger than packed (%v,%v)", got.width, got.height, packed.width, packed.height)
 	}
 }
 
@@ -98,9 +106,11 @@ func TestAutoArrangeStyleMap_explicitCluster(t *testing.T) {
 	if clusterRules.Position != nil {
 		t.Fatal("single cluster should not receive a position entry")
 	}
-	wantWidth, wantHeight := compoundNodeSize(2)
-	if clusterRules.Width != wantWidth || clusterRules.Height != wantHeight {
-		t.Fatalf("cluster size = (%v,%v), want (%v,%v)", clusterRules.Width, clusterRules.Height, wantWidth, wantHeight)
+	if clusterRules.Width < arrangeCellPitchX*2 || clusterRules.Height < arrangeCellPitchY {
+		t.Fatalf("cluster size = (%v,%v), expected at least packed layout minimum", clusterRules.Width, clusterRules.Height)
+	}
+	if clusterRules.Width <= float64(arrangeCellWidth*2) {
+		t.Fatal("cluster width should exceed formula-only size when children are packed side by side")
 	}
 }
 

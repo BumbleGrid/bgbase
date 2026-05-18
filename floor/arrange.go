@@ -156,19 +156,30 @@ func buildLayoutUnits(idx nodeIndex, childIDs []string) ([]layoutUnit, int) {
 	return units, totalWeight
 }
 
-func (state *arrangeState) layoutLeafGrid(originX, originY float64, childIDs []string) {
+func (state *arrangeState) layoutLeafGrid(originX, originY float64, childIDs []string) compoundSize {
 	if len(childIDs) == 0 {
-		return
+		return compoundSize{}
 	}
 	gridCols, _ := gridDimensions(len(childIDs))
 	unitCol := 0
 	unitRow := 0
 	rowSpan := 0
+	maxX := originX
+	maxY := originY
 
 	for _, childID := range childIDs {
 		posX := originX + float64(unitCol)*arrangeCellPitchX
 		posY := originY + float64(unitRow)*arrangeCellPitchY
 		state.positions[childID] = stylemap.CanvasPosition{X: posX, Y: posY}
+
+		endX := posX + float64(arrangeCellWidth)
+		endY := posY + float64(arrangeCellHeight)
+		if endX > maxX {
+			maxX = endX
+		}
+		if endY > maxY {
+			maxY = endY
+		}
 
 		unitCol++
 		if unitCol >= gridCols {
@@ -180,13 +191,31 @@ func (state *arrangeState) layoutLeafGrid(originX, originY float64, childIDs []s
 			rowSpan = 0
 		}
 	}
+
+	return compoundSize{width: maxX - originX, height: maxY - originY}
+}
+
+func (state *arrangeState) finalizeCompoundSize(childCount int, content compoundSize) compoundSize {
+	formulaWidth, formulaHeight := compoundNodeSize(childCount)
+	padded := compoundSize{
+		width:  content.width + arrangeCellPitchX,
+		height: content.height + arrangeCellPitchY,
+	}
+	width := padded.width
+	if formulaWidth > width {
+		width = formulaWidth
+	}
+	height := padded.height
+	if formulaHeight > height {
+		height = formulaHeight
+	}
+	return compoundSize{width: width, height: height}
 }
 
 func (state *arrangeState) prepareNamespace(nsID string) {
 	childIDs := state.idx.children[nsID]
-	width, height := compoundNodeSize(len(childIDs))
-	state.sizes[nsID] = compoundSize{width: width, height: height}
-	state.layoutLeafGrid(arrangeCellPitchX, arrangeCellPitchY, childIDs)
+	content := state.layoutLeafGrid(arrangeCellPitchX, arrangeCellPitchY, childIDs)
+	state.sizes[nsID] = state.finalizeCompoundSize(len(childIDs), content)
 }
 
 func (state *arrangeState) unitFootprint(unit layoutUnit) compoundSize {
@@ -264,11 +293,8 @@ func (state *arrangeState) layoutCluster(clusterID string, clusterStartX float64
 		}
 		originX = 0
 	}
-	_ = state.packUnits(originX, 0, units)
-
-	childCount := len(childIDs)
-	width, height := compoundNodeSize(childCount)
-	clusterSize := compoundSize{width: width, height: height}
+	packed := state.packUnits(originX, 0, units)
+	clusterSize := state.finalizeCompoundSize(len(childIDs), packed)
 	if _, exists := state.idx.byID[clusterID]; exists {
 		state.sizes[clusterID] = clusterSize
 	}
