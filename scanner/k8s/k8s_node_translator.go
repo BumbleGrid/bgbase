@@ -3,6 +3,7 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/BumbleGrid/bgbase/node"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +17,32 @@ import (
 
 func k8sRESTID(clusterNodeID, restPath string) string {
 	return fmt.Sprintf("%s/k8s/%s", clusterNodeID, restPath)
+}
+
+func clusterLabelFromNodeID(clusterNodeID string) string {
+	const prefix = "cluster/"
+	if after, ok := strings.CutPrefix(clusterNodeID, prefix); ok && after != "" {
+		return after
+	}
+	return clusterNodeID
+}
+
+func (*NodeTranslator) TranslateCluster(ctx context.Context, tctx K8sTranslateContext) (node.Data, error) {
+	if err := ctx.Err(); err != nil {
+		return node.Data{}, err
+	}
+	if tctx.ClusterNodeID == "" {
+		return node.Data{}, fmt.Errorf("cluster node id is required")
+	}
+	metaCopy := tctx.Meta
+	return node.Data{
+		ID:            tctx.ClusterNodeID,
+		Label:         clusterLabelFromNodeID(tctx.ClusterNodeID),
+		Floor:         tctx.Floor,
+		BgKind:        node.BgKindCluster,
+		InfraProvider: node.InfraProviderManual,
+		Meta:          &metaCopy,
+	}, nil
 }
 
 func metaWithObjectLabels(base node.Meta, objectLabels map[string]string) *node.Meta {

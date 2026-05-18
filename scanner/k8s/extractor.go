@@ -46,6 +46,12 @@ func Floor0Extractor(
 
 	var flat []node.Data
 
+	clusterNode, err := translator.TranslateCluster(ctx, clusterTctx)
+	if err != nil {
+		return content, fmt.Errorf("translate cluster: %w", err)
+	}
+	flat = append(flat, clusterNode)
+
 	namespaces, err := lister.ListNamespaces(ctx)
 	if err != nil {
 		return content, fmt.Errorf("list namespaces: %w", err)

@@ -23,6 +23,30 @@ func testK8sTranslateContext() K8sTranslateContext {
 	}
 }
 
+func TestTranslateCluster(t *testing.T) {
+	trans := NewNodeTranslator()
+	tctx := testK8sTranslateContext()
+	got, err := trans.TranslateCluster(context.Background(), tctx)
+	if err != nil {
+		t.Fatalf("TranslateCluster: %v", err)
+	}
+	if got.ID != "cluster/main" {
+		t.Errorf("ID = %q", got.ID)
+	}
+	if got.Label != "main" {
+		t.Errorf("Label = %q", got.Label)
+	}
+	if got.BgKind != node.BgKindCluster {
+		t.Errorf("BgKind = %q", got.BgKind)
+	}
+	if got.Parent != nil {
+		t.Errorf("Parent = %v, want nil", got.Parent)
+	}
+	if got.InfraProvider != node.InfraProviderManual {
+		t.Errorf("InfraProvider = %q", got.InfraProvider)
+	}
+}
+
 func TestTranslateNamespaces(t *testing.T) {
 	trans := NewNodeTranslator()
 	tctx := testK8sTranslateContext()
