@@ -50,6 +50,21 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	if svcPos.X == webPos.X && svcPos.Y == webPos.Y {
 		t.Fatal("namespace children should not share the same position")
 	}
+
+	nsRules := styleMap.ByID["cluster/main/k8s/namespaces/prod"].Node
+	wantWidth, wantHeight := compoundNodeSize(2)
+	if nsRules.Width != wantWidth || nsRules.Height != wantHeight {
+		t.Fatalf("namespace size = (%v,%v), want (%v,%v)", nsRules.Width, nsRules.Height, wantWidth, wantHeight)
+	}
+}
+
+func TestCompoundNodeSize(t *testing.T) {
+	width, height := compoundNodeSize(3)
+	wantWidth := 178 * 3 * 1.3
+	wantHeight := 104 * 3 * 1.3
+	if width != wantWidth || height != wantHeight {
+		t.Fatalf("compoundNodeSize(3) = (%v,%v), want (%v,%v)", width, height, wantWidth, wantHeight)
+	}
 }
 
 func TestAutoArrangeStyleMap_explicitCluster(t *testing.T) {
@@ -74,8 +89,16 @@ func TestAutoArrangeStyleMap_explicitCluster(t *testing.T) {
 	if w2.X != arrangeCellPitchX || w2.Y != 0 {
 		t.Fatalf("second workload at (%v,%v), want (%v,0)", w2.X, w2.Y, arrangeCellPitchX)
 	}
-	if _, ok := styleMap.ByID[clusterID]; ok {
+	clusterRules := styleMap.ByID[clusterID].Node
+	if clusterRules == nil {
+		t.Fatal("expected cluster style rules")
+	}
+	if clusterRules.Position != nil {
 		t.Fatal("cluster container node should not receive a position entry")
+	}
+	wantWidth, wantHeight := compoundNodeSize(2)
+	if clusterRules.Width != wantWidth || clusterRules.Height != wantHeight {
+		t.Fatalf("cluster size = (%v,%v), want (%v,%v)", clusterRules.Width, clusterRules.Height, wantWidth, wantHeight)
 	}
 }
 
