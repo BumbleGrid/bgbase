@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	arrangeCellWidth  = 178
-	arrangeCellHeight = 104
-	arrangeCellGap    = 48
+	arrangeCellWidth     = 178
+	arrangeCellHeight    = 104
+	arrangeCellGap       = 48
+	arrangeCompoundScale = 1.3
 )
 
 var (
@@ -97,6 +98,18 @@ func childLayoutWeight(idx nodeIndex, childID string, data node.Data) int {
 		return 1
 	}
 	return len(idx.children[childID]) + 1
+}
+
+func compoundNodeSize(childCount int) (width, height float64) {
+	if childCount <= 0 {
+		return 0, 0
+	}
+	scale := float64(childCount) * arrangeCompoundScale
+	return float64(arrangeCellWidth) * scale, float64(arrangeCellHeight) * scale
+}
+
+func isCompoundBgKind(kind node.BgKind) bool {
+	return kind == node.BgKindCluster || kind == node.BgKindNamespace
 }
 
 type layoutBounds struct {
@@ -198,7 +211,7 @@ func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
 		clusterOffsetX = clusterStartX + span + arrangeCellPitchX
 	}
 
-	byID := make(map[string]stylemap.StyleRules, len(positions))
+	byID := make(map[string]stylemap.StyleRules, len(positions)+len(idx.byID))
 	for nodeID, pos := range positions {
 		position := pos
 		byID[nodeID] = stylemap.StyleRules{
@@ -206,6 +219,24 @@ func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
 				Position: &position,
 			},
 		}
+	}
+
+	for nodeID, data := range idx.byID {
+		if !isCompoundBgKind(data.BgKind) {
+			continue
+		}
+		childCount := len(idx.children[nodeID])
+		if childCount == 0 {
+			continue
+		}
+		width, height := compoundNodeSize(childCount)
+		rules := byID[nodeID]
+		if rules.Node == nil {
+			rules.Node = &stylemap.NodeStyleRules{}
+		}
+		rules.Node.Width = width
+		rules.Node.Height = height
+		byID[nodeID] = rules
 	}
 
 	return stylemap.StyleMap{ByID: byID}
