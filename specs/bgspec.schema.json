@@ -121,7 +121,7 @@
           "description": "Style rules keyed by node or edge 'id'. Targets a single element. Overrides 'global', 'byFloor', and 'byTag'. Use this for per-node color, position, or border overrides that should survive re-extraction.",
           "additionalProperties": false,
           "patternProperties": {
-            "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$": {
+            "^[a-zA-Z0-9][a-zA-Z0-9./|_-]*[a-zA-Z0-9]$": {
               "$ref": "#/definitions/styleRules"
             }
           }
@@ -312,22 +312,12 @@
 
         "nodes": {
           "type": "array",
-          "description": "All nodes at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Node schema.",
-          "if": { "properties": { "floor": { "const": 0 } } },
-          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-node.json" } },
-          "else": {
-            "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-node.json" }
-          }
+          "description": "All nodes at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Node schema."
         },
 
         "edges": {
           "type": "array",
-          "description": "All edges at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Edge schema.",
-          "if": { "properties": { "floor": { "const": 0 } } },
-          "then": { "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-edge.json" } },
-          "else": {
-            "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-edge.json" }
-          }
+          "description": "All edges at this floor. For Floor 0, each item must conform to the BGSpec Floor 0 Edge schema."
         },
 
         "meta": {
@@ -340,7 +330,36 @@
           }
         }
 
-      }
+      },
+
+      "allOf": [
+        {
+          "if": {
+            "properties": { "floor": { "const": 0 } },
+            "required": ["floor"]
+          },
+          "then": {
+            "properties": {
+              "nodes": {
+                "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-node.json" }
+              },
+              "edges": {
+                "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-edge.json" }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "nodes": {
+                "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-node.json" }
+              },
+              "edges": {
+                "items": { "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-edge.json" }
+              }
+            }
+          }
+        }
+      ]
     }
 
   },
