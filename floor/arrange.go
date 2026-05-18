@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	arrangeCellWidth     = 178
+	arrangeCellWidth     = 160
 	arrangeCellHeight    = 104
 	arrangeCellGap       = 48
-	arrangeCompoundScale = 1.3
+	arrangeCompoundScale = 1
 )
 
 var (
@@ -23,6 +23,23 @@ var (
 type nodeIndex struct {
 	byID     map[string]node.Data
 	children map[string][]string
+}
+
+type compoundSize struct {
+	width  float64
+	height float64
+}
+
+type layoutUnit struct {
+	id          string
+	weight      int
+	isNamespace bool
+}
+
+type arrangeState struct {
+	idx       nodeIndex
+	positions map[string]stylemap.CanvasPosition
+	sizes     map[string]compoundSize
 }
 
 func buildNodeIndex(nodes []node.Wrapper) nodeIndex {
@@ -112,37 +129,18 @@ func isCompoundBgKind(kind node.BgKind) bool {
 	return kind == node.BgKindCluster || kind == node.BgKindNamespace
 }
 
-type layoutBounds struct {
-	maxX float64
-	maxY float64
+func partitionClusterChildren(idx nodeIndex, clusterID string) (namespaces, others []string) {
+	for _, childID := range idx.children[clusterID] {
+		if idx.byID[childID].BgKind == node.BgKindNamespace {
+			namespaces = append(namespaces, childID)
+		} else {
+			others = append(others, childID)
+		}
+	}
+	return namespaces, others
 }
 
-func (bounds *layoutBounds) include(x, y float64) {
-	if x > bounds.maxX {
-		bounds.maxX = x
-	}
-	if y > bounds.maxY {
-		bounds.maxY = y
-	}
-}
-
-func layoutContainer(
-	idx nodeIndex,
-	containerID string,
-	originX, originY float64,
-	positions map[string]stylemap.CanvasPosition,
-) layoutBounds {
-	childIDs := idx.children[containerID]
-	if len(childIDs) == 0 {
-		return layoutBounds{}
-	}
-
-	type layoutUnit struct {
-		id          string
-		weight      int
-		isNamespace bool
-	}
-
+func buildLayoutUnits(idx nodeIndex, childIDs []string) ([]layoutUnit, int) {
 	units := make([]layoutUnit, 0, len(childIDs))
 	totalWeight := 0
 	for _, childID := range childIDs {
@@ -155,64 +153,131 @@ func layoutContainer(
 			isNamespace: data.BgKind == node.BgKindNamespace,
 		})
 	}
+	return units, totalWeight
+}
 
-	gridCols, _ := gridDimensions(totalWeight)
-	var bounds layoutBounds
+func (state *arrangeState) layoutLeafGrid(originX, originY float64, childIDs []string) {
+	if len(childIDs) == 0 {
+		return
+	}
+	gridCols, _ := gridDimensions(len(childIDs))
 	unitCol := 0
 	unitRow := 0
 	rowSpan := 0
 
-	for _, unit := range units {
-		blockCols, blockRows := gridDimensions(unit.weight)
+	for _, childID := range childIDs {
 		posX := originX + float64(unitCol)*arrangeCellPitchX
 		posY := originY + float64(unitRow)*arrangeCellPitchY
-		positions[unit.id] = stylemap.CanvasPosition{X: posX, Y: posY}
-		bounds.include(posX, posY)
+		state.positions[childID] = stylemap.CanvasPosition{X: posX, Y: posY}
 
-		if unit.isNamespace {
-			innerOriginX := posX + arrangeCellPitchX
-			innerOriginY := posY + arrangeCellPitchY
-			inner := layoutContainer(idx, unit.id, innerOriginX, innerOriginY, positions)
-			bounds.include(inner.maxX, inner.maxY)
-		}
-
-		unitCol += blockCols
-		if blockRows > rowSpan {
-			rowSpan = blockRows
-		}
+		unitCol++
 		if unitCol >= gridCols {
 			unitCol = 0
 			unitRow += rowSpan
+			if rowSpan == 0 {
+				rowSpan = 1
+			}
 			rowSpan = 0
 		}
 	}
-
-	return bounds
 }
 
-// AutoArrangeStyleMap assigns canvas positions for nodes on a floor in styleMap.byId.
-// Cluster roots (explicit Cluster nodes or implicit parent IDs such as cluster/main) are
-// laid out from (0,0). Direct children are placed in a near-square grid; a Namespace child
-// reserves len(children)+1 cells at the parent level and recurses with the same rules inside.
-func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
-	idx := buildNodeIndex(content.Nodes)
-	clusterRoots := findClusterRoots(idx)
+func (state *arrangeState) prepareNamespace(nsID string) {
+	childIDs := state.idx.children[nsID]
+	width, height := compoundNodeSize(len(childIDs))
+	state.sizes[nsID] = compoundSize{width: width, height: height}
+	state.layoutLeafGrid(arrangeCellPitchX, arrangeCellPitchY, childIDs)
+}
 
-	positions := make(map[string]stylemap.CanvasPosition)
-	var clusterOffsetX float64
-
-	for _, clusterID := range clusterRoots {
-		clusterStartX := clusterOffsetX
-		bounds := layoutContainer(idx, clusterID, clusterStartX, 0, positions)
-		span := bounds.maxX - clusterStartX
-		if span < 0 {
-			span = 0
+func (state *arrangeState) unitFootprint(unit layoutUnit) compoundSize {
+	if unit.isNamespace {
+		size := state.sizes[unit.id]
+		return compoundSize{
+			width:  size.width + arrangeCellGap,
+			height: size.height + arrangeCellGap,
 		}
-		clusterOffsetX = clusterStartX + span + arrangeCellPitchX
+	}
+	return compoundSize{width: arrangeCellPitchX, height: arrangeCellPitchY}
+}
+
+func (state *arrangeState) packUnits(originX, originY float64, units []layoutUnit) compoundSize {
+	if len(units) == 0 {
+		return compoundSize{}
 	}
 
-	byID := make(map[string]stylemap.StyleRules, len(positions)+len(idx.byID))
-	for nodeID, pos := range positions {
+	gridCols, _ := gridDimensions(len(units))
+	unitCol := 0
+	rowMaxHeight := 0.0
+	pixelX := originX
+	pixelY := originY
+	maxX := originX
+	maxY := originY
+
+	for _, unit := range units {
+		footprint := state.unitFootprint(unit)
+		if unitCol > 0 && unitCol >= gridCols {
+			pixelX = originX
+			pixelY += rowMaxHeight
+			unitCol = 0
+			rowMaxHeight = 0
+		}
+
+		state.positions[unit.id] = stylemap.CanvasPosition{X: pixelX, Y: pixelY}
+
+		endX := pixelX + footprint.width
+		endY := pixelY + footprint.height
+		if endX > maxX {
+			maxX = endX
+		}
+		if endY > maxY {
+			maxY = endY
+		}
+
+		pixelX += footprint.width
+		if footprint.height > rowMaxHeight {
+			rowMaxHeight = footprint.height
+		}
+		unitCol++
+	}
+
+	return compoundSize{
+		width:  maxX - originX,
+		height: maxY - originY,
+	}
+}
+
+func (state *arrangeState) layoutCluster(clusterID string, clusterStartX float64) compoundSize {
+	namespaces, others := partitionClusterChildren(state.idx, clusterID)
+	childIDs := make([]string, 0, len(namespaces)+len(others))
+	childIDs = append(childIDs, namespaces...)
+	childIDs = append(childIDs, others...)
+
+	for _, nsID := range namespaces {
+		state.prepareNamespace(nsID)
+	}
+
+	units, _ := buildLayoutUnits(state.idx, childIDs)
+	originX := clusterStartX
+	if _, exists := state.idx.byID[clusterID]; exists {
+		if clusterStartX > 0 {
+			state.positions[clusterID] = stylemap.CanvasPosition{X: clusterStartX, Y: 0}
+		}
+		originX = 0
+	}
+	_ = state.packUnits(originX, 0, units)
+
+	childCount := len(childIDs)
+	width, height := compoundNodeSize(childCount)
+	clusterSize := compoundSize{width: width, height: height}
+	if _, exists := state.idx.byID[clusterID]; exists {
+		state.sizes[clusterID] = clusterSize
+	}
+	return clusterSize
+}
+
+func (state *arrangeState) toStyleMap() stylemap.StyleMap {
+	byID := make(map[string]stylemap.StyleRules, len(state.positions)+len(state.sizes))
+	for nodeID, pos := range state.positions {
 		position := pos
 		byID[nodeID] = stylemap.StyleRules{
 			Node: &stylemap.NodeStyleRules{
@@ -220,24 +285,34 @@ func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
 			},
 		}
 	}
-
-	for nodeID, data := range idx.byID {
-		if !isCompoundBgKind(data.BgKind) {
-			continue
-		}
-		childCount := len(idx.children[nodeID])
-		if childCount == 0 {
-			continue
-		}
-		width, height := compoundNodeSize(childCount)
+	for nodeID, size := range state.sizes {
 		rules := byID[nodeID]
 		if rules.Node == nil {
 			rules.Node = &stylemap.NodeStyleRules{}
 		}
-		rules.Node.Width = width
-		rules.Node.Height = height
+		rules.Node.Width = size.width
+		rules.Node.Height = size.height
 		byID[nodeID] = rules
 	}
-
 	return stylemap.StyleMap{ByID: byID}
+}
+
+// AutoArrangeStyleMap assigns canvas positions and compound sizes for nodes on a floor
+// in styleMap.byId. Each cluster is processed in order: namespace interiors and sizes
+// first, then cluster child positions using those footprints, then cluster size.
+func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
+	idx := buildNodeIndex(content.Nodes)
+	state := &arrangeState{
+		idx:       idx,
+		positions: make(map[string]stylemap.CanvasPosition),
+		sizes:     make(map[string]compoundSize),
+	}
+
+	var clusterOffsetX float64
+	for _, clusterID := range findClusterRoots(idx) {
+		clusterSize := state.layoutCluster(clusterID, clusterOffsetX)
+		clusterOffsetX += clusterSize.width + arrangeCellGap
+	}
+
+	return state.toStyleMap()
 }

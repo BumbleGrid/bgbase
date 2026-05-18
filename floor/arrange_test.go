@@ -35,8 +35,10 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	if nsPos.X != 0 || nsPos.Y != 0 {
 		t.Fatalf("first cluster child position = (%v,%v), want (0,0)", nsPos.X, nsPos.Y)
 	}
-	if pvPos.X != 0 || pvPos.Y != 2*arrangeCellPitchY {
-		t.Fatalf("pv position = (%v,%v), want (0,%v)", pvPos.X, pvPos.Y, 2*arrangeCellPitchY)
+	nsWidth, _ := compoundNodeSize(2)
+	wantPVX := nsWidth + arrangeCellGap
+	if pvPos.X != wantPVX || pvPos.Y != 0 {
+		t.Fatalf("pv position = (%v,%v), want (%v,0)", pvPos.X, pvPos.Y, wantPVX)
 	}
 
 	webPos := styleMap.ByID["cluster/main/k8s/namespaces/prod/deployments/web"].Node.Position
@@ -94,7 +96,7 @@ func TestAutoArrangeStyleMap_explicitCluster(t *testing.T) {
 		t.Fatal("expected cluster style rules")
 	}
 	if clusterRules.Position != nil {
-		t.Fatal("cluster container node should not receive a position entry")
+		t.Fatal("single cluster should not receive a position entry")
 	}
 	wantWidth, wantHeight := compoundNodeSize(2)
 	if clusterRules.Width != wantWidth || clusterRules.Height != wantHeight {
@@ -121,8 +123,12 @@ func TestAutoArrangeStyleMap_multipleClustersOffset(t *testing.T) {
 	if aPos.X != 0 {
 		t.Fatalf("first cluster child x = %v, want 0", aPos.X)
 	}
-	if bPos.X <= aPos.X {
-		t.Fatalf("second cluster should be offset to the right, got b at x=%v", bPos.X)
+	if bPos.X != 0 {
+		t.Fatalf("cluster child position should be parent-relative, got b at x=%v", bPos.X)
+	}
+	clusterBPos := styleMap.ByID["cluster/b"].Node.Position
+	if clusterBPos == nil || clusterBPos.X <= 0 {
+		t.Fatalf("second cluster node should be offset on canvas, got %v", clusterBPos)
 	}
 }
 
