@@ -61,6 +61,57 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	}
 }
 
+func TestAutoArrangeStyleMap_namespaceChildrenGrid(t *testing.T) {
+	clusterID := "cluster/main"
+	nsID := "cluster/main/k8s/namespaces/prod"
+	content := Content{
+		Nodes: []node.Wrapper{
+			{Data: node.Data{ID: clusterID, Label: "main", BgKind: node.BgKindCluster}},
+			{Data: node.Data{ID: nsID, Label: "prod", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: nsID + "/deployments/a", Label: "a", BgKind: node.BgKindWorkload, Parent: strPtr(nsID)}},
+			{Data: node.Data{ID: nsID + "/deployments/b", Label: "b", BgKind: node.BgKindWorkload, Parent: strPtr(nsID)}},
+			{Data: node.Data{ID: nsID + "/deployments/c", Label: "c", BgKind: node.BgKindWorkload, Parent: strPtr(nsID)}},
+			{Data: node.Data{ID: nsID + "/deployments/d", Label: "d", BgKind: node.BgKindWorkload, Parent: strPtr(nsID)}},
+			{Data: node.Data{ID: nsID + "/deployments/e", Label: "e", BgKind: node.BgKindWorkload, Parent: strPtr(nsID)}},
+		},
+	}
+
+	styleMap := AutoArrangeStyleMap(content)
+	firstRow := []string{
+		nsID + "/deployments/a",
+		nsID + "/deployments/b",
+		nsID + "/deployments/c",
+	}
+	secondRow := []string{
+		nsID + "/deployments/d",
+		nsID + "/deployments/e",
+	}
+
+	rowStartX := styleMap.ByID[firstRow[0]].Node.Position.X
+	if rowStartX != arrangeCellPitchX {
+		t.Fatalf("first child x = %v, want %v", rowStartX, arrangeCellPitchX)
+	}
+	firstRowY := styleMap.ByID[firstRow[0]].Node.Position.Y
+	if firstRowY != arrangeCompoundTopInset {
+		t.Fatalf("first child y = %v, want %v", firstRowY, arrangeCompoundTopInset)
+	}
+	for _, id := range firstRow[1:] {
+		pos := styleMap.ByID[id].Node.Position
+		if pos.Y != firstRowY {
+			t.Fatalf("%s y = %v, want first row y %v", id, pos.Y, firstRowY)
+		}
+	}
+
+	secondRowStart := styleMap.ByID[secondRow[0]].Node.Position
+	if secondRowStart.X != rowStartX {
+		t.Fatalf("second row should start at x=%v, got %v", rowStartX, secondRowStart.X)
+	}
+	secondRowY := secondRowStart.Y
+	if secondRowY <= firstRowY {
+		t.Fatalf("second row y = %v, want below first row y %v", secondRowY, firstRowY)
+	}
+}
+
 func TestAutoArrangeStyleMap_clusterNamespaceGrid(t *testing.T) {
 	clusterID := "cluster/main"
 	content := Content{
