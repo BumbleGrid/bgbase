@@ -46,8 +46,8 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	if webPos == nil || svcPos == nil {
 		t.Fatal("expected namespace children to receive positions")
 	}
-	if webPos.X <= nsPos.X || webPos.Y <= nsPos.Y {
-		t.Fatalf("web should be laid out inside namespace at offset from (%v,%v), got (%v,%v)", nsPos.X, nsPos.Y, webPos.X, webPos.Y)
+	if webPos.X != arrangeCellPitchX || webPos.Y != arrangeCompoundTopInset {
+		t.Fatalf("web position = (%v,%v), want parent-relative (%v,%v)", webPos.X, webPos.Y, arrangeCellPitchX, arrangeCompoundTopInset)
 	}
 	if svcPos.X == webPos.X && svcPos.Y == webPos.Y {
 		t.Fatal("namespace children should not share the same position")
@@ -58,8 +58,33 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	if nsRules.Width < 178*2 || nsRules.Height < wantNsMinHeight {
 		t.Fatalf("namespace size = (%v,%v), expected at least packed layout minimum", nsRules.Width, nsRules.Height)
 	}
-	if webPos.Y > nsPos.Y+arrangeCompoundTopInset+arrangeDefaultNodeHeight {
-		t.Fatalf("namespace children should be top-aligned, web y=%v ns y=%v", webPos.Y, nsPos.Y)
+}
+
+func TestAutoArrangeStyleMap_multipleNamespacesInCluster(t *testing.T) {
+	clusterID := "cluster/main"
+	nsAlpha := "cluster/main/k8s/namespaces/alpha"
+	nsBeta := "cluster/main/k8s/namespaces/beta"
+	content := Content{
+		Nodes: []node.Wrapper{
+			{Data: node.Data{ID: clusterID, Label: "main", BgKind: node.BgKindCluster}},
+			{Data: node.Data{ID: nsAlpha, Label: "alpha", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: nsBeta, Label: "beta", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: nsAlpha + "/deployments/web", Label: "web", BgKind: node.BgKindWorkload, Parent: strPtr(nsAlpha)}},
+			{Data: node.Data{ID: nsBeta + "/deployments/api", Label: "api", BgKind: node.BgKindWorkload, Parent: strPtr(nsBeta)}},
+		},
+	}
+
+	styleMap := AutoArrangeStyleMap(content)
+	alphaWeb := styleMap.ByID[nsAlpha+"/deployments/web"].Node.Position
+	betaAPI := styleMap.ByID[nsBeta+"/deployments/api"].Node.Position
+	if alphaWeb == nil || betaAPI == nil {
+		t.Fatal("expected workload positions inside namespaces")
+	}
+	if alphaWeb.X != arrangeCellPitchX || alphaWeb.Y != arrangeCompoundTopInset {
+		t.Fatalf("alpha web position = (%v,%v), want (%v,%v)", alphaWeb.X, alphaWeb.Y, arrangeCellPitchX, arrangeCompoundTopInset)
+	}
+	if betaAPI.X != arrangeCellPitchX || betaAPI.Y != arrangeCompoundTopInset {
+		t.Fatalf("beta api position = (%v,%v), want (%v,%v)", betaAPI.X, betaAPI.Y, arrangeCellPitchX, arrangeCompoundTopInset)
 	}
 }
 
