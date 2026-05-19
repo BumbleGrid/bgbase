@@ -54,8 +54,12 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	}
 
 	nsRules := styleMap.ByID["cluster/main/k8s/namespaces/prod"].Node
-	if nsRules.Width < 178*2 || nsRules.Height < 104*2 {
+	wantNsMinHeight := float64(arrangeCompoundTopInset + arrangeDefaultNodeHeight + arrangeChildGap)
+	if nsRules.Width < 178*2 || nsRules.Height < wantNsMinHeight {
 		t.Fatalf("namespace size = (%v,%v), expected at least packed layout minimum", nsRules.Width, nsRules.Height)
+	}
+	if webPos.Y > nsPos.Y+arrangeCompoundTopInset+arrangeDefaultNodeHeight {
+		t.Fatalf("namespace children should be top-aligned, web y=%v ns y=%v", webPos.Y, nsPos.Y)
 	}
 }
 
@@ -71,7 +75,7 @@ func TestCompoundNodeSize(t *testing.T) {
 func TestFinalizeCompoundSize_usesPackedLayout(t *testing.T) {
 	state := &arrangeState{sizes: make(map[string]compoundSize)}
 	packed := compoundSize{width: 400, height: 200}
-	got := state.finalizeCompoundSize(2, packed)
+	got := state.finalizeCompoundSize(node.BgKindCluster, 2, packed)
 	if got.width <= packed.width || got.height <= packed.height {
 		t.Fatalf("finalizeCompoundSize = (%v,%v), want larger than packed (%v,%v)", got.width, got.height, packed.width, packed.height)
 	}
