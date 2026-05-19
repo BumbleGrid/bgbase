@@ -17,6 +17,8 @@ const (
 	arrangeCellWidth  = arrangeDefaultNodeWidth
 	arrangeCellHeight = arrangeDefaultNodeHeight
 	arrangeCellGap    = arrangeChildGap
+
+	arrangeCompoundTopInset = 28
 )
 
 var (
@@ -111,7 +113,7 @@ func compoundChildOrigin(parentKind node.BgKind, origin stylemap.CanvasPosition)
 	if parentKind == node.BgKindNamespace {
 		return stylemap.CanvasPosition{
 			X: origin.X + arrangeCellPitchX,
-			Y: origin.Y + arrangeCellPitchY,
+			Y: origin.Y + arrangeCompoundTopInset,
 		}
 	}
 	return origin
@@ -133,15 +135,8 @@ func arrangeNodeTree(tree NodeTree, origin stylemap.CanvasPosition, byID map[str
 	}
 
 	childOrigin := compoundChildOrigin(tree.Node.BgKind, origin)
+	rowY := childOrigin.Y
 	content := compoundSize{}
-	maxNodesPerRow := int(math.Sqrt(float64(len(tree.Children))))
-	if maxNodesPerRow < 5 {
-		maxNodesPerRow = 5
-	} else if tree.Node.BgKind == node.BgKindCluster {
-		maxNodesPerRow = 999
-	}
-
-	parentSide := compoundSize{}
 
 	for idx, child := range tree.Children {
 		childRules := arrangeNodeTree(child, childOrigin, byID)
@@ -157,27 +152,17 @@ func arrangeNodeTree(tree NodeTree, origin stylemap.CanvasPosition, byID map[str
 		if childRules.Position != nil {
 			childOrigin = stylemap.CanvasPosition{
 				X: childRules.Position.X + childRules.Width + arrangeChildGap,
-				Y: compoundChildOrigin(tree.Node.BgKind, childOrigin).Y,
+				Y: rowY,
 			}
-
-			if idx%maxNodesPerRow == 0 {
-				childOrigin.Y += childRules.Position.Y + childRules.Height + arrangeCellPitchY
-				childOrigin.X = origin.X + arrangeDefaultOffsetX
-			}
-
-			if idx <= maxNodesPerRow {
-				parentSide.width += childRules.Width + arrangeChildGap
-			}
-			parentSide.height = childOrigin.Y + childRules.Height + arrangeCellPitchY - origin.Y
-
 		}
 	}
 
+	finalSize := finalizeCompoundSize(tree.Node.BgKind, len(tree.Children), content)
 	parentPosition := origin
 	parentRules := stylemap.NodeStyleRules{
 		Position: &parentPosition,
-		Width:    parentSide.width,
-		Height:   parentSide.height,
+		Width:    finalSize.width,
+		Height:   finalSize.height,
 	}
 	byID[tree.Node.ID] = stylemap.StyleRules{Node: &parentRules}
 	return parentRules
@@ -200,25 +185,30 @@ func compoundNodeSize(childCount int) (width, height float64) {
 	return float64(arrangeCellWidth) * scale, float64(arrangeCellHeight) * scale
 }
 
-func finalizeCompoundSize(childCount int, content compoundSize) compoundSize {
+func finalizeCompoundSize(parentKind node.BgKind, childCount int, content compoundSize) compoundSize {
 	formulaWidth, formulaHeight := compoundNodeSize(childCount)
 	padded := compoundSize{
-		width:  content.width + arrangeCellPitchX,
-		height: content.height + arrangeCellPitchY,
+		width: content.width + arrangeCellPitchX,
+	}
+	switch parentKind {
+	case node.BgKindNamespace:
+		padded.height = arrangeCompoundTopInset + content.height + arrangeChildGap
+	default:
+		padded.height = content.height + arrangeCellPitchY
 	}
 	width := padded.width
 	if formulaWidth > width {
 		width = formulaWidth
 	}
 	height := padded.height
-	if formulaHeight > height {
+	if parentKind != node.BgKindNamespace && formulaHeight > height {
 		height = formulaHeight
 	}
 	return compoundSize{width: width, height: height}
 }
 
-func (state *arrangeState) finalizeCompoundSize(childCount int, content compoundSize) compoundSize {
-	return finalizeCompoundSize(childCount, content)
+func (state *arrangeState) finalizeCompoundSize(parentKind node.BgKind, childCount int, content compoundSize) compoundSize {
+	return finalizeCompoundSize(parentKind, childCount, content)
 }
 
 func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
@@ -229,13 +219,11 @@ func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
 
 	byID := make(map[string]stylemap.StyleRules)
 	var cursorX float64
-	var cursorY float64
-	var lastClusterSize compoundSize
 	for _, tree := range trees {
 		if tree.Node.BgKind == node.BgKindCluster {
-			rootRules := arrangeNodeTree(tree, stylemap.CanvasPosition{X: cursorX, Y: cursorY}, byID)
+			rootRules := arrangeNodeTree(tree, stylemap.CanvasPosition{X: 0, Y: 0}, byID)
 			if cursorX > 0 {
-				position := stylemap.CanvasPosition{X: cursorX, Y: cursorY}
+				position := stylemap.CanvasPosition{X: cursorX, Y: 0}
 				rules := byID[tree.Node.ID]
 				rules.Node.Position = &position
 				byID[tree.Node.ID] = rules
@@ -244,16 +232,13 @@ func AutoArrangeStyleMap(content Content) stylemap.StyleMap {
 				rules.Node.Position = nil
 				byID[tree.Node.ID] = rules
 			}
-			cursorX += lastClusterSize.width + arrangeChildGap
-			cursorY += lastClusterSize.height + arrangeChildGap
-			lastClusterSize = compoundSize{width: rootRules.Width, height: rootRules.Height}
+			cursorX += rootRules.Width + arrangeChildGap
 			continue
 		}
 
-		origin := stylemap.CanvasPosition{X: cursorX, Y: cursorY}
+		origin := stylemap.CanvasPosition{X: cursorX, Y: 0}
 		rootRules := arrangeNodeTree(tree, origin, byID)
 		cursorX += rootRules.Width + arrangeChildGap
-		cursorY += rootRules.Height + arrangeChildGap
 	}
 
 	return stylemap.StyleMap{ByID: byID}
