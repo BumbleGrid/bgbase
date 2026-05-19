@@ -188,13 +188,13 @@ func compoundNodeSize(childCount int) (width, height float64) {
 
 func finalizeCompoundSize(parentKind node.BgKind, childCount int, content compoundSize) compoundSize {
 	formulaWidth, formulaHeight := compoundNodeSize(childCount)
-	padded := compoundSize{
-		width: content.width + arrangeCellPitchX,
-	}
+	padded := compoundSize{}
 	switch parentKind {
 	case node.BgKindNamespace:
+		padded.width = arrangeCellPitchX + content.width + arrangeChildGap
 		padded.height = arrangeCompoundTopInset + content.height + arrangeChildGap
 	default:
+		padded.width = content.width + arrangeCellPitchX
 		padded.height = content.height + arrangeCellPitchY
 	}
 	width := padded.width

@@ -54,9 +54,10 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	}
 
 	nsRules := styleMap.ByID["cluster/main/k8s/namespaces/prod"].Node
+	wantNsMinWidth := float64(arrangeCellPitchX + 2*arrangeDefaultNodeWidth + arrangeChildGap + arrangeChildGap)
 	wantNsMinHeight := float64(arrangeCompoundTopInset + arrangeDefaultNodeHeight + arrangeChildGap)
-	if nsRules.Width < 178*2 || nsRules.Height < wantNsMinHeight {
-		t.Fatalf("namespace size = (%v,%v), expected at least packed layout minimum", nsRules.Width, nsRules.Height)
+	if nsRules.Width < wantNsMinWidth || nsRules.Height < wantNsMinHeight {
+		t.Fatalf("namespace size = (%v,%v), want at least (%v,%v)", nsRules.Width, nsRules.Height, wantNsMinWidth, wantNsMinHeight)
 	}
 }
 
