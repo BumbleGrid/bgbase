@@ -61,6 +61,62 @@ func TestAutoArrangeStyleMap_implicitCluster(t *testing.T) {
 	}
 }
 
+func TestAutoArrangeStyleMap_clusterNamespaceGrid(t *testing.T) {
+	clusterID := "cluster/main"
+	content := Content{
+		Nodes: []node.Wrapper{
+			{Data: node.Data{ID: clusterID, Label: "main", BgKind: node.BgKindCluster}},
+			{Data: node.Data{ID: "cluster/main/k8s/namespaces/a", Label: "a", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: "cluster/main/k8s/namespaces/b", Label: "b", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: "cluster/main/k8s/namespaces/c", Label: "c", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: "cluster/main/k8s/namespaces/d", Label: "d", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+			{Data: node.Data{ID: "cluster/main/k8s/namespaces/e", Label: "e", BgKind: node.BgKindNamespace, Parent: strPtr(clusterID)}},
+		},
+	}
+
+	styleMap := AutoArrangeStyleMap(content)
+	gridCols, gridRows := gridDimensions(5)
+	if gridCols != 3 || gridRows != 2 {
+		t.Fatalf("gridDimensions(5) = (%d,%d), want (3,2)", gridCols, gridRows)
+	}
+
+	firstRow := []string{
+		"cluster/main/k8s/namespaces/a",
+		"cluster/main/k8s/namespaces/b",
+		"cluster/main/k8s/namespaces/c",
+	}
+	secondRow := []string{
+		"cluster/main/k8s/namespaces/d",
+		"cluster/main/k8s/namespaces/e",
+	}
+
+	rowStartX := styleMap.ByID[firstRow[0]].Node.Position.X
+	firstRowY := styleMap.ByID[firstRow[0]].Node.Position.Y
+	for _, id := range firstRow[1:] {
+		pos := styleMap.ByID[id].Node.Position
+		if pos.Y != firstRowY {
+			t.Fatalf("%s y = %v, want first row y %v", id, pos.Y, firstRowY)
+		}
+	}
+	secondRowStart := styleMap.ByID[secondRow[0]].Node.Position
+	if secondRowStart.X != rowStartX {
+		t.Fatalf("second row should start at x=%v, got %v", rowStartX, secondRowStart.X)
+	}
+	secondRowY := secondRowStart.Y
+	if secondRowY <= firstRowY {
+		t.Fatalf("second row y = %v, want below first row y %v", secondRowY, firstRowY)
+	}
+	for _, id := range secondRow[1:] {
+		pos := styleMap.ByID[id].Node.Position
+		if pos.Y != secondRowY {
+			t.Fatalf("%s y = %v, want second row y %v", id, pos.Y, secondRowY)
+		}
+		if pos.X <= secondRowStart.X {
+			t.Fatalf("%s should be to the right of %s on the same row", id, secondRow[0])
+		}
+	}
+}
+
 func TestAutoArrangeStyleMap_multipleNamespacesInCluster(t *testing.T) {
 	clusterID := "cluster/main"
 	nsAlpha := "cluster/main/k8s/namespaces/alpha"
