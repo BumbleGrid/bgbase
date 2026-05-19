@@ -214,9 +214,10 @@ func arrangeNodeTree(tree NodeTree, byID map[string]stylemap.StyleRules) stylema
 
 	childOrigin := compoundChildOrigin(tree.Node.BgKind, stylemap.CanvasPosition{})
 	var content compoundSize
-	if tree.Node.BgKind == node.BgKindCluster {
+	switch tree.Node.BgKind {
+	case node.BgKindCluster, node.BgKindNamespace:
 		content = arrangeChildrenGrid(tree, childOrigin, byID)
-	} else {
+	default:
 		content = arrangeChildrenRow(tree, childOrigin, byID)
 	}
 
