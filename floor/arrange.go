@@ -129,17 +129,7 @@ func setNodePosition(byID map[string]stylemap.StyleRules, nodeID string, positio
 	byID[nodeID] = rules
 }
 
-func arrangeNodeTree(tree NodeTree, byID map[string]stylemap.StyleRules) stylemap.NodeStyleRules {
-	if len(tree.Children) == 0 {
-		rules := stylemap.NodeStyleRules{
-			Width:  arrangeDefaultNodeWidth,
-			Height: arrangeDefaultNodeHeight,
-		}
-		byID[tree.Node.ID] = stylemap.StyleRules{Node: &rules}
-		return rules
-	}
-
-	childOrigin := compoundChildOrigin(tree.Node.BgKind, stylemap.CanvasPosition{})
+func arrangeChildrenRow(tree NodeTree, childOrigin stylemap.CanvasPosition, byID map[string]stylemap.StyleRules) compoundSize {
 	placeX := childOrigin.X
 	placeY := childOrigin.Y
 	content := compoundSize{}
@@ -158,6 +148,76 @@ func arrangeNodeTree(tree NodeTree, byID map[string]stylemap.StyleRules) stylema
 			}
 		}
 		placeX += childRules.Width + arrangeChildGap
+	}
+	return content
+}
+
+func arrangeChildrenGrid(tree NodeTree, childOrigin stylemap.CanvasPosition, byID map[string]stylemap.StyleRules) compoundSize {
+	gridCols, _ := gridDimensions(len(tree.Children))
+	rowStartX := childOrigin.X
+	placeX := rowStartX
+	placeY := childOrigin.Y
+	unitCol := 0
+	rowMaxHeight := 0.0
+	var rowWidth float64
+	content := compoundSize{}
+	firstRow := true
+
+	for idx, child := range tree.Children {
+		childRules := arrangeNodeTree(child, byID)
+		setNodePosition(byID, child.Node.ID, stylemap.CanvasPosition{X: placeX, Y: placeY})
+
+		if unitCol == 0 {
+			rowWidth = childRules.Width
+		} else {
+			rowWidth += arrangeChildGap + childRules.Width
+		}
+		if childRules.Height > rowMaxHeight {
+			rowMaxHeight = childRules.Height
+		}
+
+		unitCol++
+		lastChild := idx == len(tree.Children)-1
+		if unitCol >= gridCols || lastChild {
+			if firstRow {
+				content.width = rowWidth
+				content.height = rowMaxHeight
+				firstRow = false
+			} else {
+				if rowWidth > content.width {
+					content.width = rowWidth
+				}
+				content.height += arrangeChildGap + rowMaxHeight
+			}
+			unitCol = 0
+			if !lastChild {
+				placeY += rowMaxHeight + arrangeChildGap
+				placeX = rowStartX
+				rowMaxHeight = 0
+			}
+		} else {
+			placeX += childRules.Width + arrangeChildGap
+		}
+	}
+	return content
+}
+
+func arrangeNodeTree(tree NodeTree, byID map[string]stylemap.StyleRules) stylemap.NodeStyleRules {
+	if len(tree.Children) == 0 {
+		rules := stylemap.NodeStyleRules{
+			Width:  arrangeDefaultNodeWidth,
+			Height: arrangeDefaultNodeHeight,
+		}
+		byID[tree.Node.ID] = stylemap.StyleRules{Node: &rules}
+		return rules
+	}
+
+	childOrigin := compoundChildOrigin(tree.Node.BgKind, stylemap.CanvasPosition{})
+	var content compoundSize
+	if tree.Node.BgKind == node.BgKindCluster {
+		content = arrangeChildrenGrid(tree, childOrigin, byID)
+	} else {
+		content = arrangeChildrenRow(tree, childOrigin, byID)
 	}
 
 	finalSize := finalizeCompoundSize(tree.Node.BgKind, len(tree.Children), content)
