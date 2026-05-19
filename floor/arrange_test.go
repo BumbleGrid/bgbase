@@ -240,8 +240,8 @@ func TestAutoArrangeStyleMap_explicitCluster(t *testing.T) {
 	if clusterRules == nil {
 		t.Fatal("expected cluster style rules")
 	}
-	if clusterRules.Position != nil {
-		t.Fatal("single cluster should not receive a position entry")
+	if clusterRules.Position == nil || clusterRules.Position.X != 0 || clusterRules.Position.Y != 0 {
+		t.Fatalf("single cluster position = %v, want (0,0)", clusterRules.Position)
 	}
 	if clusterRules.Width < arrangeCellPitchX*2 || clusterRules.Height < arrangeCellPitchY {
 		t.Fatalf("cluster size = (%v,%v), expected at least packed layout minimum", clusterRules.Width, clusterRules.Height)
@@ -273,9 +273,14 @@ func TestAutoArrangeStyleMap_multipleClustersOffset(t *testing.T) {
 	if bPos.X != 0 {
 		t.Fatalf("cluster child position should be parent-relative, got b at x=%v", bPos.X)
 	}
+	clusterARules := styleMap.ByID["cluster/a"].Node
 	clusterBPos := styleMap.ByID["cluster/b"].Node.Position
-	if clusterBPos == nil || clusterBPos.X <= 0 {
-		t.Fatalf("second cluster node should be offset on canvas, got %v", clusterBPos)
+	if clusterBPos == nil {
+		t.Fatal("expected second cluster position")
+	}
+	wantClusterBY := clusterARules.Height + arrangeChildGap
+	if clusterBPos.X != 0 || clusterBPos.Y != wantClusterBY {
+		t.Fatalf("second cluster position = (%v,%v), want (0,%v)", clusterBPos.X, clusterBPos.Y, wantClusterBY)
 	}
 }
 
