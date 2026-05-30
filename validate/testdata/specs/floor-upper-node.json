@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-node.json",
+  "title": "BGSpec Upper-Floor Node",
+  "description": "Defines a single node on any floor above Floor 0 (floors 1, 2, 3, …). Upper-floor nodes are human-authored and carry no closed BGSpec taxonomy (no bgKind, infraProvider, or provider blocks). Visual identity is expressed only through Cytoscape-compatible shape and optional inline visual hints. Semantic meaning (service names, business processes, etc.) lives in label and meta — not in schema-enforced types.",
+
+  "type": "object",
+  "required": ["data"],
+  "additionalProperties": false,
+
+  "properties": {
+    "data": {
+      "type": "object",
+      "description": "Cytoscape-compatible data envelope.",
+      "required": ["id", "label", "floor", "shape"],
+      "additionalProperties": false,
+
+      "properties": {
+
+        "id": {
+          "type": "string",
+          "description": "Globally unique node identifier within this BGSpec document.",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$"
+        },
+
+        "label": {
+          "type": "string",
+          "description": "Human-readable display name. Author-defined; not validated against any taxonomy.",
+          "minLength": 1
+        },
+
+        "floor": {
+          "type": "integer",
+          "description": "Floor number. Must be >= 1 and must match the containing floor object's floor field.",
+          "minimum": 1
+        },
+
+        "shape": {
+          "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/nodeShape",
+          "description": "Cytoscape node body shape. This is the only schema-required visual discriminator for upper-floor nodes."
+        },
+
+        "shapePolygonPoints": {
+          "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/shapePolygonPoints"
+        },
+
+        "parent": {
+          "type": ["string", "null"],
+          "description": "ID of another node on the same floor used as a Cytoscape compound parent. For compound parents, prefer rectangle-family shapes per Cytoscape constraints."
+        },
+
+        "refs": {
+          "type": "array",
+          "description": "Optional IDs of nodes on floor (this.floor - 1) that this node composes or traces to. Traceability rules are enforced by the application (see SPECS.md); the schema does not require refs on every node.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+
+        "visual": {
+          "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/nodeVisualHints"
+        },
+
+        "meta": {
+          "type": "object",
+          "description": "Free-form author metadata (team, docs, tags, business notes). No closed vocabulary.",
+          "additionalProperties": true
+        }
+
+      },
+
+      "if": {
+        "properties": { "shape": { "const": "polygon" } },
+        "required": ["shape"]
+      },
+      "then": {
+        "required": ["shapePolygonPoints"]
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "comment": "Floor 1 — logical service grouping a Floor 0 deployment",
+      "data": {
+        "id": "svc-payments-api",
+        "label": "Payments API",
+        "floor": 1,
+        "shape": "round-rectangle",
+        "parent": null,
+        "refs": ["k8s-payments-api-deployment"],
+        "visual": {
+          "width": 120,
+          "height": 48,
+          "backgroundColor": "#2A2A3D",
+          "borderColor": "#F5A623",
+          "borderWidth": 1.5
+        },
+        "meta": {
+          "team": "payments-squad",
+          "description": "Handles payment capture and settlement."
+        }
+      }
+    },
+    {
+      "comment": "Floor 2 — product capability composed from Floor 1 services",
+      "data": {
+        "id": "cap-place-order",
+        "label": "Place an Order",
+        "floor": 2,
+        "shape": "hexagon",
+        "refs": ["svc-payments-api", "svc-order-api"],
+        "meta": {
+          "owner": "product-checkout"
+        }
+      }
+    },
+    {
+      "comment": "Floor 3 — business workflow with no strict lower-floor refs (leaf allowed per SPECS.md)",
+      "data": {
+        "id": "biz-order-fulfillment",
+        "label": "Order Fulfillment",
+        "floor": 3,
+        "shape": "diamond",
+        "meta": {
+          "department": "operations"
+        }
+      }
+    },
+    {
+      "comment": "Compound group on an upper floor",
+      "data": {
+        "id": "group-checkout-domain",
+        "label": "Checkout Domain",
+        "floor": 1,
+        "shape": "round-rectangle",
+        "parent": null,
+        "visual": {
+          "width": 400,
+          "height": 280,
+          "backgroundColor": "rgba(30,30,46,0.5)",
+          "borderStyle": "dashed",
+          "borderColor": "#9999B3"
+        }
+      }
+    }
+  ]
+}

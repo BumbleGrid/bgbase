@@ -1,0 +1,43 @@
+{
+  "bgspec": "0.1",
+  "document": {
+    "title": "Upper floor uses upper-node schema",
+    "company": "Acme",
+    "updatedAt": "2026-05-29T12:00:00Z"
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "label": "Infrastructure",
+      "description": "Floor 0",
+      "nodes": [
+        {
+          "data": {
+            "id": "manual-workload",
+            "label": "Example",
+            "floor": 0,
+            "bgKind": "Workload",
+            "infraProvider": "manual"
+          }
+        }
+      ],
+      "edges": []
+    },
+    {
+      "floor": 1,
+      "label": "Features",
+      "description": "Floor 1",
+      "nodes": [
+        {
+          "data": {
+            "id": "feature-node",
+            "label": "Custom feature",
+            "floor": 1,
+            "shape": "round-rectangle"
+          }
+        }
+      ],
+      "edges": []
+    }
+  ]
+}

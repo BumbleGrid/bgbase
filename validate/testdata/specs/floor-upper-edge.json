@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-upper-edge.json",
+  "title": "BGSpec Upper-Floor Edge",
+  "description": "Defines a single edge on any floor above Floor 0 (floors 1, 2, 3, …). Upper-floor edges are human-authored. They connect nodes on the same floor and express relationships only through optional labels and Cytoscape-compatible line/arrow appearance — there is no bgRelation enum and no extractionSource.",
+
+  "type": "object",
+  "required": ["data"],
+  "additionalProperties": false,
+
+  "properties": {
+    "data": {
+      "type": "object",
+      "description": "Cytoscape-compatible data envelope.",
+      "required": ["id", "source", "target", "floor"],
+      "additionalProperties": false,
+
+      "properties": {
+
+        "id": {
+          "type": "string",
+          "description": "Globally unique edge identifier within this BGSpec document. Recommended: '<source-id>--<target-id>' or include a short disambiguator when parallel edges exist.",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$"
+        },
+
+        "source": {
+          "type": "string",
+          "description": "ID of the source node on the same floor.",
+          "minLength": 1
+        },
+
+        "target": {
+          "type": "string",
+          "description": "ID of the target node on the same floor.",
+          "minLength": 1
+        },
+
+        "floor": {
+          "type": "integer",
+          "description": "Floor number. Must be >= 1 and must match the containing floor object's floor field.",
+          "minimum": 1
+        },
+
+        "label": {
+          "type": ["string", "null"],
+          "description": "Optional text drawn on the edge. Free-form; not tied to a relation taxonomy."
+        },
+
+        "visual": {
+          "$ref": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json#/definitions/edgeVisualHints"
+        },
+
+        "meta": {
+          "type": "object",
+          "description": "Free-form author metadata (rationale, runbook links, etc.).",
+          "additionalProperties": true
+        }
+
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "comment": "Floor 1 — dependency between logical services",
+      "data": {
+        "id": "svc-checkout-api--svc-payments-api",
+        "source": "svc-checkout-api",
+        "target": "svc-payments-api",
+        "floor": 1,
+        "label": "charges card",
+        "visual": {
+          "curveStyle": "bezier",
+          "lineStyle": "solid",
+          "targetArrowShape": "triangle",
+          "sourceArrowShape": "none",
+          "color": "#F5A623",
+          "width": 2
+        },
+        "meta": {
+          "description": "Checkout calls Payments on submit."
+        }
+      }
+    },
+    {
+      "comment": "Floor 2 — capability flow with dashed line",
+      "data": {
+        "id": "cap-browse-catalog--cap-place-order",
+        "source": "cap-browse-catalog",
+        "target": "cap-place-order",
+        "floor": 2,
+        "label": null,
+        "visual": {
+          "curveStyle": "straight",
+          "lineStyle": "dashed",
+          "targetArrowShape": "vee",
+          "sourceArrowShape": "none",
+          "color": "#9999B3"
+        }
+      }
+    },
+    {
+      "comment": "Floor 3 — business workflow link, minimal visual defaults",
+      "data": {
+        "id": "biz-sales--biz-order-fulfillment",
+        "source": "biz-customer-acquisition",
+        "target": "biz-order-fulfillment",
+        "floor": 3,
+        "label": "converts to order",
+        "visual": {
+          "curveStyle": "taxi",
+          "lineStyle": "solid",
+          "targetArrowShape": "triangle",
+          "sourceArrowShape": "none"
+        }
+      }
+    }
+  ]
+}

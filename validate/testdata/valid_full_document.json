@@ -1,0 +1,195 @@
+{
+  "bgspec": "0.2",
+  "document": {
+    "title": "Payments Domain \u2014 Infrastructure Map",
+    "company": "Acme Corp",
+    "updatedAt": "2025-05-13T10:00:00Z",
+    "description": "Floor 0 infrastructure graph for the Payments domain.",
+    "authors": [
+      {
+        "name": "bgspec-extractor-ci",
+        "role": "Automated Extractor"
+      },
+      {
+        "name": "Alice Kim",
+        "email": "alice@acme.com",
+        "role": "Platform Engineer"
+      }
+    ],
+    "tags": [
+      "payments",
+      "infrastructure",
+      "k8s"
+    ]
+  },
+  "styleMap": {
+    "global": {
+      "node": {
+        "borderStyle": "solid",
+        "borderWidth": 1,
+        "borderColor": "#CCCCCC"
+      },
+      "edge": {
+        "lineStyle": "solid",
+        "color": "#999999"
+      }
+    },
+    "byFloor": {
+      "0": {
+        "node": {
+          "color": "#F0F4FF",
+          "textColor": "#1A1A2E"
+        },
+        "edge": {
+          "color": "#6B7FD7"
+        }
+      },
+      "1": {
+        "node": {
+          "color": "#FFF8F0",
+          "textColor": "#2E1A0A"
+        }
+      }
+    },
+    "byTag": {
+      "environment": {
+        "production": {
+          "node": {
+            "borderStyle": "dashed"
+          }
+        }
+      }
+    },
+    "byId": {
+      "k8s-payments-api": {
+        "node": {
+          "color": "#534AB7",
+          "textColor": "#EEEDFE",
+          "borderColor": "#2E2580",
+          "borderWidth": 2,
+          "position": {
+            "x": 340,
+            "y": 200
+          }
+        }
+      },
+      "k8s-payments-postgres": {
+        "node": {
+          "color": "#1E6B3C",
+          "textColor": "#EAFAF1",
+          "borderColor": "#145228",
+          "borderWidth": 2,
+          "position": {
+            "x": 340,
+            "y": 380
+          }
+        }
+      },
+      "k8s-payments-api--calls--k8s-identity-api": {
+        "edge": {
+          "lineStyle": "dashed",
+          "color": "#D97706",
+          "width": 2,
+          "targetArrowShape": "triangle"
+        }
+      }
+    }
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "label": "Infrastructure",
+      "description": "Physical and logical infrastructure layer. Nodes are Kubernetes resources.",
+      "meta": {
+        "extractedAt": "2025-05-13T10:00:00Z",
+        "extractorVersion": "0.2.0"
+      },
+      "nodes": [
+        {
+          "data": {
+            "id": "k8s-payments-namespace",
+            "label": "payments",
+            "floor": 0,
+            "bgKind": "Namespace",
+            "infraProvider": "kubernetes",
+            "k8s": {
+              "kind": "Namespace",
+              "name": "payments",
+              "namespace": null,
+              "apiVersion": "v1"
+            },
+            "parent": null,
+            "drillTo": null,
+            "style": {},
+            "meta": {
+              "team": "platform-engineering",
+              "extractedAt": "2025-05-13T10:00:00Z",
+              "extractorVersion": "0.2.0"
+            }
+          }
+        },
+        {
+          "data": {
+            "id": "k8s-payments-api",
+            "label": "Payments API",
+            "floor": 0,
+            "bgKind": "Workload",
+            "infraProvider": "kubernetes",
+            "k8s": {
+              "kind": "Deployment",
+              "name": "payments-api",
+              "namespace": "payments",
+              "apiVersion": "apps/v1",
+              "replicas": 3,
+              "image": "payments-api:2.1.0",
+              "resources": {
+                "requests": {
+                  "cpu": "250m",
+                  "memory": "512Mi"
+                },
+                "limits": {
+                  "cpu": "1",
+                  "memory": "1Gi"
+                }
+              }
+            },
+            "parent": "k8s-payments-namespace",
+            "drillTo": null,
+            "style": {},
+            "meta": {
+              "team": "payments-squad",
+              "criticality": "critical",
+              "extractedAt": "2025-05-13T10:00:00Z",
+              "extractorVersion": "0.2.0"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "data": {
+            "id": "k8s-payments-api--calls--k8s-identity-api",
+            "source": "k8s-payments-api",
+            "target": "k8s-identity-api",
+            "floor": 0,
+            "bgRelation": "Calls",
+            "extractionSource": "manual",
+            "inferred": false,
+            "label": "token validation",
+            "style": {},
+            "meta": {
+              "description": "Payments API calls Identity API to validate JWT tokens on every request."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "floor": 1,
+      "label": "Features",
+      "description": "Product and capability features.",
+      "nodes": [],
+      "edges": []
+    }
+  ]
+}
