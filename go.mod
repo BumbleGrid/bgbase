@@ -3,6 +3,7 @@ module github.com/BumbleGrid/bgbase
 go 1.22.2
 
 require (
+	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3

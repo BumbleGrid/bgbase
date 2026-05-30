@@ -1,0 +1,17 @@
+{
+  "bgspec": "0.1",
+  "document": {
+    "title": "One floor only",
+    "company": "Acme",
+    "updatedAt": "2026-05-29T12:00:00Z"
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "label": "Infrastructure",
+      "description": "Floor 0",
+      "nodes": [],
+      "edges": []
+    }
+  ]
+}

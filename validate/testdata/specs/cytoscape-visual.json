@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/cytoscape-visual.json",
+  "title": "BGSpec Cytoscape Visual Vocabulary",
+  "description": "Shared Cytoscape.js shape and edge-style enumerations used by upper-floor (1+) node and edge schemas and by document styleMap overrides. These values carry no BGSpec semantic meaning — they exist only for rendering.",
+
+  "definitions": {
+
+    "nodeShape": {
+      "type": "string",
+      "description": "Cytoscape.js node `shape` style value (https://js.cytoscape.org/#style/node-body).",
+      "enum": [
+        "ellipse",
+        "triangle",
+        "round-triangle",
+        "rectangle",
+        "round-rectangle",
+        "bottom-round-rectangle",
+        "cut-rectangle",
+        "barrel",
+        "rhomboid",
+        "right-rhomboid",
+        "diamond",
+        "round-diamond",
+        "pentagon",
+        "round-pentagon",
+        "hexagon",
+        "round-hexagon",
+        "concave-hexagon",
+        "heptagon",
+        "round-heptagon",
+        "octagon",
+        "round-octagon",
+        "star",
+        "tag",
+        "round-tag",
+        "vee",
+        "polygon"
+      ]
+    },
+
+    "shapePolygonPoints": {
+      "type": "array",
+      "description": "Cytoscape.js `shape-polygon-points`: alternating x,y in [-1, 1] relative to the node bounding box. Required when shape is `polygon`.",
+      "minItems": 6,
+      "items": {
+        "type": "number",
+        "minimum": -1,
+        "maximum": 1
+      }
+    },
+
+    "lineStyle": {
+      "type": "string",
+      "description": "Cytoscape.js edge `line-style`.",
+      "enum": ["solid", "dotted", "dashed"]
+    },
+
+    "curveStyle": {
+      "type": "string",
+      "description": "Cytoscape.js edge `curve-style`.",
+      "enum": [
+        "haystack",
+        "straight",
+        "straight-triangle",
+        "bezier",
+        "unbundled-bezier",
+        "segments",
+        "round-segments",
+        "taxi",
+        "round-taxi"
+      ]
+    },
+
+    "arrowShape": {
+      "type": "string",
+      "description": "Cytoscape.js `source-arrow-shape` / `target-arrow-shape` value.",
+      "enum": [
+        "triangle",
+        "triangle-tee",
+        "circle-triangle",
+        "triangle-cross",
+        "triangle-backcurve",
+        "vee",
+        "tee",
+        "square",
+        "circle",
+        "diamond",
+        "chevron",
+        "none"
+      ]
+    },
+
+    "nodeVisualHints": {
+      "type": "object",
+      "description": "Optional inline Cytoscape node body hints. Prefer root document styleMap for values that must survive re-layout; use these fields for author convenience or exporter defaults.",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "description": "Cytoscape `width` in px.",
+          "minimum": 1
+        },
+        "height": {
+          "type": "number",
+          "description": "Cytoscape `height` in px.",
+          "minimum": 1
+        },
+        "backgroundColor": {
+          "type": "string",
+          "description": "Cytoscape `background-color`. Hex (#RRGGBB) or named CSS color.",
+          "minLength": 1
+        },
+        "borderColor": {
+          "type": "string",
+          "description": "Cytoscape `border-color`.",
+          "minLength": 1
+        },
+        "borderWidth": {
+          "type": "number",
+          "description": "Cytoscape `border-width` in px.",
+          "minimum": 0
+        },
+        "borderStyle": {
+          "type": "string",
+          "description": "Cytoscape `border-style`.",
+          "enum": ["solid", "dotted", "dashed", "double"]
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+
+    "edgeVisualHints": {
+      "type": "object",
+      "description": "Optional inline Cytoscape edge hints. No relation taxonomy — appearance only.",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Cytoscape `line-color`.",
+          "minLength": 1
+        },
+        "width": {
+          "type": "number",
+          "description": "Cytoscape `width` in px.",
+          "minimum": 0.5
+        },
+        "lineStyle": { "$ref": "#/definitions/lineStyle" },
+        "curveStyle": { "$ref": "#/definitions/curveStyle" },
+        "sourceArrowShape": { "$ref": "#/definitions/arrowShape" },
+        "targetArrowShape": { "$ref": "#/definitions/arrowShape" },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+
+  }
+}

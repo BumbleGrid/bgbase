@@ -1,0 +1,35 @@
+{
+  "bgspec": "0.1",
+  "document": {
+    "title": "Extra field on node data",
+    "company": "Acme",
+    "updatedAt": "2026-05-29T12:00:00Z"
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "label": "Infrastructure",
+      "description": "Floor 0",
+      "nodes": [
+        {
+          "data": {
+            "id": "manual-workload",
+            "label": "Example",
+            "floor": 0,
+            "bgKind": "Workload",
+            "infraProvider": "manual",
+            "extra_field": "x"
+          }
+        }
+      ],
+      "edges": []
+    },
+    {
+      "floor": 1,
+      "label": "Features",
+      "description": "Floor 1",
+      "nodes": [],
+      "edges": []
+    }
+  ]
+}
