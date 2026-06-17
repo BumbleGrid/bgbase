@@ -71,6 +71,14 @@ func TestSchemaValidator_validFloor0Only(t *testing.T) {
 	}
 }
 
+func TestSchemaValidator_validK8sPathIDs(t *testing.T) {
+	validator := mustValidator(t)
+	doc := loadFixture(t, "valid_k8s_path_ids.json")
+	if err := validator.Validate(doc); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
 func TestSchemaValidator_validFullExample(t *testing.T) {
 	validator := mustValidator(t)
 	doc := loadFixture(t, "valid_full_document.json")

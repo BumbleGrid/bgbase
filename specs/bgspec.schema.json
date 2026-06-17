@@ -279,6 +279,18 @@
               "type": "string",
               "pattern": "^#[0-9A-Fa-f]{6}$",
               "description": "Color of the edge label text."
+            },
+
+            "sourceSide": {
+              "type": "string",
+              "description": "Side of the source node where the edge attaches (React Flow handle).",
+              "enum": ["top", "right", "bottom", "left"]
+            },
+
+            "targetSide": {
+              "type": "string",
+              "description": "Side of the target node where the edge attaches (React Flow handle).",
+              "enum": ["top", "right", "bottom", "left"]
             }
 
           }

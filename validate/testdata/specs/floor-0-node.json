@@ -19,9 +19,9 @@
 
         "id": {
           "type": "string",
-          "description": "Globally unique node identifier within this BGSpec document. Recommended convention: '<provider>-<namespace>-<name>' e.g. 'k8s-payments-api-deployment'.",
+          "description": "Globally unique node identifier within this BGSpec document. Kubernetes extractors use REST-style paths, e.g. 'cluster/main/k8s/namespaces/apps/deployments/web'. Slug form (e.g. 'k8s-payments-api-deployment') is also valid.",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$"
+          "pattern": "^[a-z0-9][a-z0-9\\-./]*[a-z0-9]$"
         },
 
         "label": {

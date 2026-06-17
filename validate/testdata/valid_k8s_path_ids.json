@@ -1,0 +1,61 @@
+{
+  "bgspec": "0.1",
+  "document": {
+    "title": "K8s path-style IDs",
+    "company": "Acme",
+    "updatedAt": "2026-06-16T12:00:00Z"
+  },
+  "floors": [
+    {
+      "floor": 0,
+      "label": "Infrastructure",
+      "description": "Floor 0 from k8s scan",
+      "nodes": [
+        {
+          "data": {
+            "id": "cluster/complex",
+            "label": "complex",
+            "floor": 0,
+            "bgKind": "Cluster",
+            "infraProvider": "manual"
+          }
+        },
+        {
+          "data": {
+            "id": "cluster/complex/k8s/namespaces/apps/deployments/web",
+            "label": "web",
+            "floor": 0,
+            "bgKind": "Workload",
+            "infraProvider": "kubernetes",
+            "parent": "cluster/complex/k8s/namespaces/apps",
+            "k8s": {
+              "kind": "Deployment",
+              "name": "web",
+              "namespace": "apps"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "data": {
+            "id": "cluster/complex/k8s/namespaces/apps/services/web|cluster/complex/k8s/namespaces/apps/deployments/web|Exposes|true",
+            "source": "cluster/complex/k8s/namespaces/apps/services/web",
+            "target": "cluster/complex/k8s/namespaces/apps/deployments/web",
+            "floor": 0,
+            "bgRelation": "Exposes",
+            "extractionSource": "k8s-manifest",
+            "inferred": true
+          }
+        }
+      ]
+    },
+    {
+      "floor": 1,
+      "label": "Features",
+      "description": "Placeholder upper floor",
+      "nodes": [],
+      "edges": []
+    }
+  ]
+}

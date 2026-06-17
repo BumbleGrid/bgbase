@@ -19,9 +19,9 @@
 
         "id": {
           "type": "string",
-          "description": "Globally unique edge identifier within this BGSpec document. Recommended convention: '<source-id>--<bgRelation>--<target-id>' e.g. 'k8s-payments-svc--Exposes--k8s-payments-api'.",
+          "description": "Globally unique edge identifier within this BGSpec document. Kubernetes extractors use '<source>|<target>|<bgRelation>|<inferred>' (e.g. 'cluster/main/k8s/.../svc|cluster/main/k8s/.../deploy|Exposes|false'). Slug form with double hyphens is also valid.",
           "minLength": 1,
-          "pattern": "^[a-z0-9][a-z0-9\\-\\.]*[a-z0-9]$"
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9\\-./|]*[a-zA-Z0-9]$"
         },
 
         "source": {
