@@ -12,7 +12,7 @@ import (
 
 const k8sEdgeTagPrefix = "k8s.edge."
 
-func (*EdgeResolver) ResolveEdges(ctx context.Context, nodes []node.Data) ([]edge.Data, error) {
+func (r *EdgeResolver) ResolveEdges(ctx context.Context, nodes []node.Data) ([]edge.Data, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -46,6 +46,11 @@ func (*EdgeResolver) ResolveEdges(ctx context.Context, nodes []node.Data) ([]edg
 		edgesFromMetaTags(&src, byID, add)
 	}
 	applyNameHeuristicEdges(nodes, add)
+
+	if r != nil && r.istioLister != nil {
+		istioEdges := r.resolveIstioEdges(ctx, nodes, out)
+		out = append(out, istioEdges...)
+	}
 
 	sort.Slice(out, func(a, b int) bool {
 		return out[a].ID < out[b].ID
