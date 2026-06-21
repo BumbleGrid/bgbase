@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/BumbleGrid/bgbase/edge"
 	"github.com/BumbleGrid/bgbase/node"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -15,10 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
-
-func int32Ptr(value int32) *int32 {
-	return &value
-}
 
 func testTranslateContext() K8sTranslateContext {
 	return K8sTranslateContext{
@@ -32,13 +30,18 @@ func k8sBgKindsEmittedByStockMapper() []node.BgKind {
 	return []node.BgKind{
 		node.BgKindCluster,
 		node.BgKindNamespace,
-		node.BgKindStorage,
 		node.BgKindGateway,
 		node.BgKindWorkload,
 		node.BgKindJobRunner,
 		node.BgKindServiceDiscovery,
 		node.BgKindLoadBalancer,
 		node.BgKindExternalService,
+	}
+}
+
+func k8sBgKindsNotEmittedByNarrowedMapper() []node.BgKind {
+	return []node.BgKind{
+		node.BgKindStorage,
 		node.BgKindConfigSource,
 		node.BgKindSecretSource,
 		node.BgKindNetworkPolicy,
@@ -61,13 +64,6 @@ func collectBgKinds(nodes []node.Wrapper) map[node.BgKind]struct{} {
 	return out
 }
 
-func clusterScopedK8sObjects() []runtime.Object {
-	return []runtime.Object{
-		&corev1.PersistentVolume{ObjectMeta: metav1.ObjectMeta{Name: "pv-shared"}},
-		&networkingv1.IngressClass{ObjectMeta: metav1.ObjectMeta{Name: "public"}},
-	}
-}
-
 func namespacedK8sObjects(namespace string) []runtime.Object {
 	return []runtime.Object{
 		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
@@ -79,9 +75,6 @@ func namespacedK8sObjects(namespace string) []runtime.Object {
 		},
 		&appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: namespace},
-		},
-		&appsv1.ReplicaSet{
-			ObjectMeta: metav1.ObjectMeta{Name: "web-rs", Namespace: namespace},
 		},
 		&batchv1.CronJob{
 			ObjectMeta: metav1.ObjectMeta{Name: "tick", Namespace: namespace},
@@ -107,37 +100,11 @@ func namespacedK8sObjects(namespace string) []runtime.Object {
 		&networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{Name: "edge", Namespace: namespace},
 		},
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: namespace},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "tok", Namespace: namespace},
-		},
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{Name: "data", Namespace: namespace},
-		},
-		&networkingv1.NetworkPolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "default-deny", Namespace: namespace},
-		},
-		&autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: namespace},
-			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-					APIVersion: "apps/v1",
-					Kind:       "Deployment",
-					Name:       "web",
-				},
-				MinReplicas: int32Ptr(1),
-				MaxReplicas: 3,
-			},
-		},
 	}
 }
 
 func fullClusterObjects(namespace string) []runtime.Object {
-	out := append([]runtime.Object{}, clusterScopedK8sObjects()...)
-	out = append(out, namespacedK8sObjects(namespace)...)
-	return out
+	return namespacedK8sObjects(namespace)
 }
 
 func TestFloor0Extractor_coversAllBgKindsFromStockK8sMapper(t *testing.T) {
@@ -161,6 +128,11 @@ func TestFloor0Extractor_coversAllBgKindsFromStockK8sMapper(t *testing.T) {
 	for _, absent := range k8sBgKindsNotEmittedByStockMapper() {
 		if _, ok := seen[absent]; ok {
 			t.Errorf("unexpected bgKind %q (stock K8s mapper should not emit it)", absent)
+		}
+	}
+	for _, absent := range k8sBgKindsNotEmittedByNarrowedMapper() {
+		if _, ok := seen[absent]; ok {
+			t.Errorf("unexpected bgKind %q (narrowed Floor 0 mapper should not emit it)", absent)
 		}
 	}
 	if content.Floor != 0 {
@@ -243,8 +215,7 @@ func TestFloor0Extractor_floorFromTranslateContext(t *testing.T) {
 
 func TestFloor0Extractor_multipleNamespaces(t *testing.T) {
 	ctx := context.Background()
-	objs := append(clusterScopedK8sObjects(), namespacedK8sObjects("alpha")...)
-	objs = append(objs, namespacedK8sObjects("beta")...)
+	objs := append(namespacedK8sObjects("alpha"), namespacedK8sObjects("beta")...)
 	cs := fake.NewSimpleClientset(objs...)
 	reader := NewReaderWithClientset(cs)
 	trans := NewNodeTranslator()
@@ -327,8 +298,150 @@ func TestFloor0Extractor_expectedNodeCountSingleNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Floor0Extractor: %v", err)
 	}
-	wantNodes := 1 + 2 + 16
+	wantNodes := 11
 	if len(content.Nodes) != wantNodes {
-		t.Fatalf("len(nodes) = %d, want %d (cluster + cluster-scoped PV+IngressClass + namespace + 15 namespaced kinds)", len(content.Nodes), wantNodes)
+		t.Fatalf("len(nodes) = %d, want %d (cluster + namespace + 9 namespaced resources across 8 kinds)", len(content.Nodes), wantNodes)
+	}
+}
+
+type trackingLister struct {
+	inner   K8sLister
+	forbidden map[string]int
+}
+
+func newTrackingLister(inner K8sLister) *trackingLister {
+	return &trackingLister{
+		inner:     inner,
+		forbidden: make(map[string]int),
+	}
+}
+
+func (tracker *trackingLister) recordForbidden(method string) error {
+	tracker.forbidden[method]++
+	return fmt.Errorf("unexpected %s call", method)
+}
+
+func (tracker *trackingLister) ListNamespaces(ctx context.Context) ([]corev1.Namespace, error) {
+	return tracker.inner.ListNamespaces(ctx)
+}
+
+func (tracker *trackingLister) ListPersistentVolumes(ctx context.Context) ([]corev1.PersistentVolume, error) {
+	return nil, tracker.recordForbidden("ListPersistentVolumes")
+}
+
+func (tracker *trackingLister) ListIngressClasses(ctx context.Context) ([]networkingv1.IngressClass, error) {
+	return nil, tracker.recordForbidden("ListIngressClasses")
+}
+
+func (tracker *trackingLister) ListDeployments(ctx context.Context, namespace string) ([]appsv1.Deployment, error) {
+	return tracker.inner.ListDeployments(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListStatefulSets(ctx context.Context, namespace string) ([]appsv1.StatefulSet, error) {
+	return tracker.inner.ListStatefulSets(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListDaemonSets(ctx context.Context, namespace string) ([]appsv1.DaemonSet, error) {
+	return tracker.inner.ListDaemonSets(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListReplicaSets(ctx context.Context, namespace string) ([]appsv1.ReplicaSet, error) {
+	return nil, tracker.recordForbidden("ListReplicaSets")
+}
+
+func (tracker *trackingLister) ListCronJobs(ctx context.Context, namespace string) ([]batchv1.CronJob, error) {
+	return tracker.inner.ListCronJobs(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListJobs(ctx context.Context, namespace string) ([]batchv1.Job, error) {
+	return tracker.inner.ListJobs(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListServices(ctx context.Context, namespace string) ([]corev1.Service, error) {
+	return tracker.inner.ListServices(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListIngresses(ctx context.Context, namespace string) ([]networkingv1.Ingress, error) {
+	return tracker.inner.ListIngresses(ctx, namespace)
+}
+
+func (tracker *trackingLister) ListConfigMaps(ctx context.Context, namespace string) ([]corev1.ConfigMap, error) {
+	return nil, tracker.recordForbidden("ListConfigMaps")
+}
+
+func (tracker *trackingLister) ListSecrets(ctx context.Context, namespace string) ([]corev1.Secret, error) {
+	return nil, tracker.recordForbidden("ListSecrets")
+}
+
+func (tracker *trackingLister) ListPersistentVolumeClaims(ctx context.Context, namespace string) ([]corev1.PersistentVolumeClaim, error) {
+	return nil, tracker.recordForbidden("ListPersistentVolumeClaims")
+}
+
+func (tracker *trackingLister) ListNetworkPolicies(ctx context.Context, namespace string) ([]networkingv1.NetworkPolicy, error) {
+	return nil, tracker.recordForbidden("ListNetworkPolicies")
+}
+
+func (tracker *trackingLister) ListHorizontalPodAutoscalersV2(ctx context.Context, namespace string) ([]autoscalingv2.HorizontalPodAutoscaler, error) {
+	return nil, tracker.recordForbidden("ListHorizontalPodAutoscalersV2")
+}
+
+func TestFloor0Extractor_doesNotListRemovedResourceTypes(t *testing.T) {
+	ctx := context.Background()
+	nsName := "demo"
+	cs := fake.NewSimpleClientset(fullClusterObjects(nsName)...)
+	reader := NewReaderWithClientset(cs)
+	lister := newTrackingLister(reader)
+	trans := NewNodeTranslator()
+	res := NewEdgeResolver()
+
+	_, err := Floor0Extractor(ctx, lister, trans, res, testTranslateContext())
+	if err != nil {
+		t.Fatalf("Floor0Extractor: %v", err)
+	}
+	if len(lister.forbidden) != 0 {
+		t.Fatalf("removed resource types were listed: %v", lister.forbidden)
+	}
+}
+
+func TestFloor0Extractor_resolvesCoreWorkloadEdges(t *testing.T) {
+	ctx := context.Background()
+	nsName := "demo"
+	cs := fake.NewSimpleClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: nsName}},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: nsName},
+			Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIP: "10.96.0.1"},
+		},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: nsName}},
+	)
+	reader := NewReaderWithClientset(cs)
+	trans := NewNodeTranslator()
+	res := NewEdgeResolver()
+
+	content, err := Floor0Extractor(ctx, reader, trans, res, testTranslateContext())
+	if err != nil {
+		t.Fatalf("Floor0Extractor: %v", err)
+	}
+
+	svcID := "cluster/main/k8s/namespaces/demo/services/web"
+	depID := "cluster/main/k8s/namespaces/demo/deployments/web"
+	ingID := "cluster/main/k8s/namespaces/demo/ingresses/web"
+
+	var exposes, routes bool
+	for idx := range content.Edges {
+		edgeData := content.Edges[idx].Data
+		if edgeData.Source == svcID && edgeData.Target == depID && edgeData.BGRelation == edge.BgRelationExposes {
+			exposes = true
+		}
+		if edgeData.Source == ingID && edgeData.Target == svcID && edgeData.BGRelation == edge.BgRelationRoutes {
+			routes = true
+		}
+	}
+	if !exposes {
+		t.Fatalf("missing Service->Deployment Exposes edge among %+v", content.Edges)
+	}
+	if !routes {
+		t.Fatalf("missing Ingress->Service Routes edge among %+v", content.Edges)
 	}
 }

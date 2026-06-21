@@ -62,26 +62,6 @@ func Floor0Extractor(
 	}
 	flat = append(flat, nsNodes...)
 
-	pvs, err := lister.ListPersistentVolumes(ctx)
-	if err != nil {
-		return content, fmt.Errorf("list persistent volumes: %w", err)
-	}
-	pvNodes, err := translator.TranslatePersistentVolumes(ctx, clusterTctx, pvs)
-	if err != nil {
-		return content, fmt.Errorf("translate persistent volumes: %w", err)
-	}
-	flat = append(flat, pvNodes...)
-
-	ingClasses, err := lister.ListIngressClasses(ctx)
-	if err != nil {
-		return content, fmt.Errorf("list ingress classes: %w", err)
-	}
-	ingClassNodes, err := translator.TranslateIngressClasses(ctx, clusterTctx, ingClasses)
-	if err != nil {
-		return content, fmt.Errorf("translate ingress classes: %w", err)
-	}
-	flat = append(flat, ingClassNodes...)
-
 	nsNames := make([]string, 0, len(namespaces))
 	for idx := range namespaces {
 		nsNames = append(nsNames, namespaces[idx].Name)
@@ -123,16 +103,6 @@ func Floor0Extractor(
 		}
 		flat = append(flat, dsNodes...)
 
-		rsItems, err := lister.ListReplicaSets(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list replicasets: %w", nsName, err)
-		}
-		rsNodes, err := translator.TranslateReplicaSets(ctx, nsTctx, rsItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate replicasets: %w", nsName, err)
-		}
-		flat = append(flat, rsNodes...)
-
 		cjItems, err := lister.ListCronJobs(ctx, nsName)
 		if err != nil {
 			return content, fmt.Errorf("namespace %q list cronjobs: %w", nsName, err)
@@ -172,56 +142,6 @@ func Floor0Extractor(
 			return content, fmt.Errorf("namespace %q translate ingresses: %w", nsName, err)
 		}
 		flat = append(flat, ingNodes...)
-
-		cmItems, err := lister.ListConfigMaps(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list configmaps: %w", nsName, err)
-		}
-		cmNodes, err := translator.TranslateConfigMaps(ctx, nsTctx, cmItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate configmaps: %w", nsName, err)
-		}
-		flat = append(flat, cmNodes...)
-
-		secItems, err := lister.ListSecrets(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list secrets: %w", nsName, err)
-		}
-		secNodes, err := translator.TranslateSecrets(ctx, nsTctx, secItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate secrets: %w", nsName, err)
-		}
-		flat = append(flat, secNodes...)
-
-		pvcItems, err := lister.ListPersistentVolumeClaims(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list pvcs: %w", nsName, err)
-		}
-		pvcNodes, err := translator.TranslatePersistentVolumeClaims(ctx, nsTctx, pvcItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate pvcs: %w", nsName, err)
-		}
-		flat = append(flat, pvcNodes...)
-
-		npItems, err := lister.ListNetworkPolicies(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list networkpolicies: %w", nsName, err)
-		}
-		npNodes, err := translator.TranslateNetworkPolicies(ctx, nsTctx, npItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate networkpolicies: %w", nsName, err)
-		}
-		flat = append(flat, npNodes...)
-
-		hpaItems, err := lister.ListHorizontalPodAutoscalersV2(ctx, nsName)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q list horizontalpodautoscalers: %w", nsName, err)
-		}
-		hpaNodes, err := translator.TranslateHorizontalPodAutoscalersV2(ctx, nsTctx, hpaItems)
-		if err != nil {
-			return content, fmt.Errorf("namespace %q translate horizontalpodautoscalers: %w", nsName, err)
-		}
-		flat = append(flat, hpaNodes...)
 	}
 
 	edgeData, err := resolver.ResolveEdges(ctx, flat)
