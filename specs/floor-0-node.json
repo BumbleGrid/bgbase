@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://bumblegrid.tech/schemas/bgspec/v0.1/floor-0-node.json",
   "title": "BGSpec Floor 0 Node",
-  "description": "Defines a single node at Floor 0 (Physical / Logical layer) of a Bumble Grid Specification document. Floor 0 nodes are produced exclusively by automated extraction from infrastructure-as-code sources (e.g. Kubernetes, Terraform). Human authoring is restricted to 'meta' overrides and to rendering overrides in the root document 'styleMap' (never written by extractors).",
+  "description": "Defines a single node at Floor 0 (Physical / Logical layer) of a Bumble Grid Specification document. Floor 0 nodes are produced exclusively by automated extraction from infrastructure-as-code sources (e.g. Kubernetes, Terraform). The stock Kubernetes Floor 0 extractor lists cluster metadata, namespaces, deployments, statefulsets, daemonsets, cronjobs, jobs, services, and ingresses only. Human authoring is restricted to 'meta' overrides and to rendering overrides in the root document 'styleMap' (never written by extractors).",
 
   "type": "object",
   "required": ["data"],
@@ -38,20 +38,16 @@
 
         "bgKind": {
           "type": "string",
-          "description": "Bumble Grid's own node taxonomy. Defines the logical role of the node across all floors, provider-agnostic. The closed vocabulary below is for Floor 0; future floors will extend this enum.",
+          "description": "Bumble Grid's own node taxonomy. Defines the logical role of the node across all floors, provider-agnostic. The stock Kubernetes Floor 0 extractor emits Cluster (manual infraProvider), Namespace, Workload, JobRunner, Gateway, ServiceDiscovery, LoadBalancer, and ExternalService. Database, Cache, and MessageBroker are reserved for manual classification or future extractors.",
           "enum": [
             "Workload",
             "Database",
             "Cache",
             "MessageBroker",
-            "Storage",
             "Gateway",
             "LoadBalancer",
             "ExternalService",
-            "ConfigSource",
-            "SecretSource",
             "ServiceDiscovery",
-            "NetworkPolicy",
             "JobRunner",
             "Namespace",
             "Cluster"
@@ -79,36 +75,16 @@
 
             "kind": {
               "type": "string",
-              "description": "The raw Kubernetes resource kind. Drives validation of bgKind compatibility (see bgKind-to-k8sKind mapping in BGSpec docs).",
+              "description": "The raw Kubernetes resource kind. Must be one of the kinds listed by the stock Floor 0 Kubernetes extractor.",
               "enum": [
+                "Namespace",
                 "Deployment",
                 "StatefulSet",
                 "DaemonSet",
-                "ReplicaSet",
-                "Pod",
-                "Job",
                 "CronJob",
+                "Job",
                 "Service",
-                "Ingress",
-                "IngressClass",
-                "ConfigMap",
-                "Secret",
-                "PersistentVolumeClaim",
-                "PersistentVolume",
-                "StorageClass",
-                "HorizontalPodAutoscaler",
-                "VerticalPodAutoscaler",
-                "NetworkPolicy",
-                "ServiceAccount",
-                "ClusterRole",
-                "ClusterRoleBinding",
-                "Role",
-                "RoleBinding",
-                "Namespace",
-                "ResourceQuota",
-                "LimitRange",
-                "EndpointSlice",
-                "CustomResourceDefinition"
+                "Ingress"
               ]
             },
 
@@ -120,7 +96,7 @@
 
             "namespace": {
               "type": ["string", "null"],
-              "description": "Kubernetes namespace. Null for cluster-scoped resources (e.g. Namespace, ClusterRole, PersistentVolume)."
+              "description": "Kubernetes namespace. Null only for cluster-scoped Namespace resources."
             },
 
             "apiVersion": {
@@ -149,7 +125,7 @@
 
             "replicas": {
               "type": ["integer", "null"],
-              "description": "Desired replica count. Applicable to Deployment, StatefulSet, ReplicaSet.",
+              "description": "Desired replica count. Applicable to Deployment and StatefulSet.",
               "minimum": 0
             },
 
@@ -190,7 +166,7 @@
 
             "ports": {
               "type": ["array", "null"],
-              "description": "Exposed ports. Applies to Service, Ingress, Pod.",
+              "description": "Exposed ports. Applies to Service.",
               "items": {
                 "type": "object",
                 "required": ["port"],
@@ -202,16 +178,6 @@
                   "protocol":   { "type": "string", "enum": ["TCP", "UDP", "SCTP"], "default": "TCP" }
                 }
               }
-            },
-
-            "storageClass": {
-              "type": ["string", "null"],
-              "description": "For PVC/PV nodes: storage class name."
-            },
-
-            "storageCapacity": {
-              "type": ["string", "null"],
-              "description": "For PVC/PV nodes: requested or provisioned capacity. E.g. '20Gi'."
             },
 
             "schedule": {
