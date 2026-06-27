@@ -305,7 +305,7 @@ func TestFloor0Extractor_expectedNodeCountSingleNamespace(t *testing.T) {
 }
 
 type trackingLister struct {
-	inner   K8sLister
+	inner     K8sLister
 	forbidden map[string]int
 }
 
@@ -443,5 +443,57 @@ func TestFloor0Extractor_resolvesCoreWorkloadEdges(t *testing.T) {
 	}
 	if !routes {
 		t.Fatalf("missing Ingress->Service Routes edge among %+v", content.Edges)
+	}
+}
+
+func TestFloor0Extractor_workloadFilterRemovesDeploymentKeepsNamespace(t *testing.T) {
+	ctx := context.Background()
+	nsName := "apps"
+	cs := fake.NewSimpleClientset(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: nsName}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "noise-worker", Namespace: nsName}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "api", Namespace: nsName}},
+	)
+	reader := NewReaderWithClientset(cs)
+	filter, err := ParseScanFilter(nil, []string{nsName + "/deployments/noise*"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lister := NewListerWithScanFilter(reader, filter)
+	trans := NewNodeTranslator()
+	res := NewEdgeResolver()
+
+	content, err := Floor0Extractor(ctx, lister, trans, res, testTranslateContext())
+	if err != nil {
+		t.Fatalf("Floor0Extractor: %v", err)
+	}
+
+	nsID := "cluster/main/k8s/namespaces/" + nsName
+	noiseID := nsID + "/deployments/noise-worker"
+	apiID := nsID + "/deployments/api"
+
+	var hasNamespace, hasNoise, hasAPI bool
+	for idx := range content.Nodes {
+		nodeID := content.Nodes[idx].Data.ID
+		switch nodeID {
+		case nsID:
+			hasNamespace = true
+			if content.Nodes[idx].Data.BgKind != node.BgKindNamespace {
+				t.Fatalf("namespace node bgKind = %q", content.Nodes[idx].Data.BgKind)
+			}
+		case noiseID:
+			hasNoise = true
+		case apiID:
+			hasAPI = true
+		}
+	}
+	if !hasNamespace {
+		t.Fatal("missing namespace node after workload filter")
+	}
+	if hasNoise {
+		t.Fatal("noise-worker deployment should be filtered out")
+	}
+	if !hasAPI {
+		t.Fatal("api deployment should remain after workload filter")
 	}
 }
